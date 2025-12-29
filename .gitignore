@@ -1,0 +1,14 @@
+# Секреты
+.env
+
+# Данные базы
+postgres_data/
+
+# Python мусор
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# PyCharm мусор
+.idea/
