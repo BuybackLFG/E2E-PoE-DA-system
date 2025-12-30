@@ -15,8 +15,8 @@ from parsers.league_finder import get_latest_league
 DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
 DB_NAME = os.getenv('DB_NAME')
-DB_HOST = 'localhost'
-DB_PORT = '5433'
+DB_HOST = 'db'
+DB_PORT = '5432'
 
 LEAGUE_CACHE_FILE = ".last_league"
 LEAGUE_UPDATE_INTERVAL = timedelta(days=1)  # Проверяем новую лигу раз в сутки
@@ -69,7 +69,8 @@ def get_league():
 
 
 engine = create_engine(f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}')
-
+print(f"[{datetime.now().isoformat()}] === COLLECTOR STARTED === PID: {os.getpid()}")
+print(f"[{datetime.now().isoformat()}] DB connection string: postgresql://{DB_USER}:***@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
 def main():
     while True:

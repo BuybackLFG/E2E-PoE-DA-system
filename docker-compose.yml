@@ -27,10 +27,12 @@ services:
       - db
   # Наш Python-скрипт (сборщик)
   collector:
-    build: ./collector  # Docker будет искать Dockerfile в папке collector
+    build: ./collector                # Dockerfile лежит в ./collector
     container_name: poe_collector
     depends_on:
-      - db             # Сначала запустится база, потом скрипт
+      - db
     env_file:
-      - .env           # Скрипт тоже будет видеть пароли из .env
+      - .env
+    working_dir: /app                 # Устанавливаем рабочую директорию
+    command: sh -c "exec python -u collector.py"
     restart: always
