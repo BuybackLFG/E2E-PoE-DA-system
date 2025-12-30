@@ -18,7 +18,6 @@ CREATE TABLE IF NOT EXISTS divination_cards (
     card_name VARCHAR(255),
     stack_size INTEGER,
     chaos_value DECIMAL(15, 2),
-    exalted_value DECIMAL(15, 2),
     trade_count INTEGER,
     details_id VARCHAR(255)
 );
@@ -34,7 +33,6 @@ CREATE TABLE IF NOT EXISTS unique_items (
     level_required INTEGER,
     chaos_value DECIMAL(15, 2),
     links INTEGER,
-    corrupted BOOLEAN,
     details_id VARCHAR(255)
 );
 

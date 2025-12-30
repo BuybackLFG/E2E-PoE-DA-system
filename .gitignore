@@ -3,6 +3,8 @@
 
 # Данные базы
 postgres_data/
+parsers/.last_league
+parsers/.last_league_update
 
 # Python мусор
 __pycache__/
