@@ -36,3 +36,37 @@ services:
     working_dir: /app                 # Устанавливаем рабочую директорию
     command: sh -c "exec python -u collector.py"
     restart: always
+  # Redash требует Redis для очередей задач
+  redis:
+    image: redis:7-alpine
+    restart: always
+  # Основной сервер Redash
+  redash:
+    image: redash/redash:25.8.0
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "8080:5000" # Redash будет доступен по адресу localhost:8080
+    environment:
+      PYTHONUNBUFFERED: 1
+      REDASH_LOG_LEVEL: "INFO"
+      REDASH_REDIS_URL: "redis://redis:6379/0"
+      REDASH_DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}"
+      REDASH_COOKIE_SECRET: ${REDASH_COOKIE_SECRET}
+      REDASH_SECRET_KEY: ${REDASH_COOKIE_SECRET}
+    restart: always
+
+  # Воркер для выполнения SQL-запросов
+  redash_worker:
+    image: redash/redash:25.8.0
+    command: worker
+    environment:
+      REDASH_LOG_LEVEL: "INFO"
+      REDASH_REDIS_URL: "redis://redis:6379/0"
+      REDASH_DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}"
+      QUEUES: "queries,scheduled_queries,celery"
+      WORKERS_COUNT: 1
+      REDASH_COOKIE_SECRET: ${REDASH_COOKIE_SECRET}
+      REDASH_SECRET_KEY: ${REDASH_COOKIE_SECRET}
+    restart: always
