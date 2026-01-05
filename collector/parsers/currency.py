@@ -1,26 +1,53 @@
-import requests
 import pandas as pd
+import logging
+from typing import Optional
+import requests
+
+logger = logging.getLogger(__name__)
 
 
-def parse_currency(league):
+def parse_currency(league: str) -> Optional[pd.DataFrame]:
+    """
+    Парсит данные валюты с poe.ninja.
+    
+    Args:
+        league: Имя лиги Path of Exile
+        
+    Returns:
+        DataFrame с данными валюты или None при ошибке получения
+    """
     url = f"https://poe.ninja/api/data/currencyoverview?league={league}&type=Currency"
-    response = requests.get(url)
-    if response.status_code != 200:
+    
+    try:
+        logger.info(f"Fetching currency data for league: {league}")
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        
+        data = response.json()
+        lines = data.get('lines', [])
+        
+        result = []
+        for line in lines:
+            result.append({
+                'league_name': league,
+                'currency_name': line.get('currencyTypeName'),
+                'details_id': line.get('detailsId'),
+                'chaos_equivalent': line.get('chaosEquivalent'),
+                'pay_value': line.get('pay', {}).get('value') if line.get('pay') else None,
+                'receive_value': line.get('receive', {}).get('value') if line.get('receive') else None,
+                'trade_count': line.get('pay', {}).get('count') if line.get('pay') else 0
+            })
+        
+        df = pd.DataFrame(result)
+        logger.info(f"Successfully parsed {len(df)} currency entries for league: {league}")
+        return df
+        
+    except requests.exceptions.Timeout:
+        logger.error(f"Timeout fetching currency data for league: {league}")
         return None
-
-    data = response.json()
-    lines = data.get('lines', [])
-
-    # Формируем список словарей точно под структуру таблицы
-    result = []
-    for line in lines:
-        result.append({
-            'league_name': league,
-            'currency_name': line.get('currencyTypeName'),
-            'details_id': line.get('detailsId'),
-            'chaos_equivalent': line.get('chaosEquivalent'),
-            'pay_value': line.get('pay', {}).get('value') if line.get('pay') else None,
-            'receive_value': line.get('receive', {}).get('value') if line.get('receive') else None,
-            'trade_count': line.get('pay', {}).get('count') if line.get('pay') else 0
-        })
-    return pd.DataFrame(result)
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Request error fetching currency data for league {league}: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Error parsing currency for league {league}: {e}", exc_info=True)
+        return None
