@@ -1,7 +1,5 @@
-version: '3.8'
-
 services:
-  # Наша база данных
+  # база данных
   db:
     image: postgres:15
     container_name: poe_postgres
@@ -12,16 +10,63 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
-
+      - ./init-db:/docker-entrypoint-initdb.d
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: poe_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_NAME} # Логин для входа в pgAdmin
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}  # Пароль для входа в pgAdmin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
   # Наш Python-скрипт (сборщик)
   collector:
-    build: ./collector  # Docker будет искать Dockerfile в папке collector
+    build: ./collector                # Dockerfile лежит в ./collector
     container_name: poe_collector
     depends_on:
-      - db             # Сначала запустится база, потом скрипт
+      - db
     env_file:
-      - .env           # Скрипт тоже будет видеть пароли из .env
+      - .env
+    working_dir: /app                 # Устанавливаем рабочую директорию
+    command: sh -c "exec python -u collector.py"
+    restart: always
+  # Redash требует Redis для очередей задач
+  redis:
+    image: redis:7-alpine
+    restart: always
+  # Основной сервер Redash
+  redash:
+    image: redash/redash:25.8.0
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "8080:5000" # Redash будет доступен по адресу localhost:8080
+    environment:
+      PYTHONUNBUFFERED: 1
+      REDASH_LOG_LEVEL: "INFO"
+      REDASH_REDIS_URL: "redis://redis:6379/0"
+      REDASH_DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}"
+      REDASH_COOKIE_SECRET: ${REDASH_COOKIE_SECRET}
+      REDASH_SECRET_KEY: ${REDASH_COOKIE_SECRET}
+    restart: always
+
+  # Воркер для выполнения SQL-запросов
+  redash_worker:
+    image: redash/redash:25.8.0
+    command: worker
+    environment:
+      REDASH_LOG_LEVEL: "INFO"
+      REDASH_REDIS_URL: "redis://redis:6379/0"
+      REDASH_DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}"
+      QUEUES: "queries,scheduled_queries,celery"
+      WORKERS_COUNT: 1
+      REDASH_COOKIE_SECRET: ${REDASH_COOKIE_SECRET}
+      REDASH_SECRET_KEY: ${REDASH_COOKIE_SECRET}
     restart: always
