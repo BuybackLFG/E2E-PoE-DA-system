@@ -11,6 +11,7 @@ from parsers.cards import parse_cards
 from parsers.items import parse_items
 from parsers.league_finder import get_latest_league
 from parsers.historical import parse_historical_currency, parse_historical_items, parse_historical_cards
+from parsers.historical_backfill import HistoricalBackfiller
 from league_manager import LeagueManager, fetch_available_leagues_from_ninja, get_latest_league_from_wiki
 
 load_dotenv()
@@ -205,6 +206,59 @@ def collect_data_for_source(source_name, parser_func, league, table_name, use_hi
         return (False, 0)
 
 
+def run_backfill_on_start():
+    """
+    Запустить заполнение исторических данных при старте контейнера.
+    
+    Выполняется один раз при запуске, если переменная RUN_BACKFILL_ON_START=true
+    """
+    global engine, league_manager
+    
+    RUN_BACKFILL_ON_START = os.getenv('RUN_BACKFILL_ON_START', 'false').lower() == 'true'
+    
+    if not RUN_BACKFILL_ON_START:
+        logger.info("Заполнение исторических данных при старте отключено (RUN_BACKFILL_ON_START=false)")
+        return
+    
+    logger.info("="*70)
+    logger.info("ЗАПУСК ЗАПОЛНЕНИЯ ИСТОРИЧЕСКИХ ДАННЫХ ПРИ СТАРТЕ")
+    logger.info("="*70)
+    
+    try:
+        # Получить лигу для заполнения
+        SPECIFIC_LEAGUE = os.getenv('SPECIFIC_LEAGUE', None)
+        if SPECIFIC_LEAGUE:
+            league_name = SPECIFIC_LEAGUE
+        else:
+            league_name = get_league()
+        
+        logger.info(f"Лига для заполнения: {league_name}")
+        
+        # Инициализировать механизм заполнения
+        backfiller = HistoricalBackfiller(engine, league_name)
+        
+        # Заполнить все типы данных (последние 90 дней по умолчанию)
+        results = backfiller.backfill_all(max_days_back=90)
+        
+        total_items = sum(r[0] for r in results.values())
+        total_records = sum(r[1] for r in results.values())
+        
+        logger.info(
+            f"Заполнение при старте завершено:\n"
+            f"  Всего обработано предметов: {total_items}\n"
+            f"  Всего вставлено записей: {total_records}\n"
+            f"  Валюты: {results['currency'][0]} предметов, {results['currency'][1]} записей\n"
+            f"  Карты гаданий: {results['divination_cards'][0]} предметов, {results['divination_cards'][1]} записей\n"
+            f"  Уникальные предметы: {results['unique_items'][0]} предметов, {results['unique_items'][1]} записей"
+        )
+        
+        logger.info("="*70)
+        
+    except Exception as e:
+        logger.error(f"Ошибка при заполнении исторических данных при старте: {e}", exc_info=True)
+        # Не прерываем работу коллектора при ошибке backfill
+
+
 def main():
     """Главный цикл коллектора."""
     global engine, league_manager
@@ -214,6 +268,9 @@ def main():
     if not initialize_database():
         logger.error("Failed to initialize database. Exiting.")
         return
+    
+    # Запустить заполнение исторических данных при старте (если включено)
+    run_backfill_on_start()
     
     cycle_count = 0
     
