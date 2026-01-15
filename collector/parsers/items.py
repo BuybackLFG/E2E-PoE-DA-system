@@ -29,7 +29,6 @@ def parse_items(league: str) -> Optional[pd.DataFrame]:
         result = []
         for line in lines:
             result.append({
-                'league_name': league,
                 'item_name': line.get('name'),
                 'base_type': line.get('baseType'),
                 'item_type': line.get('itemType'),

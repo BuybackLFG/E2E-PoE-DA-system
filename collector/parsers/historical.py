@@ -5,93 +5,125 @@ import requests
 import io
 import zipfile
 from datetime import datetime
+import os  # Импортируем модуль os для работы с файловой системой
 
 logger = logging.getLogger(__name__)
+
+# Общий заголовок User-Agent для всех запросов
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36'
+}
+
+
+# --- НОВАЯ ФУНКЦИЯ ДЛЯ ПОИСКА ПРАВИЛЬНОГО ИМЕНИ ФАЙЛА ВНУТРИ ZIP ---
+def _find_csv_filename_in_zip(zip_namelist: List[str], league_name: str, file_type: str) -> Optional[str]:
+    """
+    Ищет наиболее подходящее имя CSV-файла внутри ZIP-архива.
+    Приоритет:
+    1. Точное совпадение: "{league_name}.{file_type}.csv"
+    2. Если league_name - это "Standard" или "Hardcore", то просто "{file_type}.csv"
+    3. Если league_name содержит "Hardcore", то "Hardcore {league_name}.{file_type}.csv" (для случаев типа "Hardcore Settlers")
+    """
+    # 1. Поиск точного совпадения
+    exact_match = f"{league_name}.{file_type}.csv"
+    if exact_match in zip_namelist:
+        return exact_match
+
+    # 2. Обработка "Standard" и "Hardcore" лиг, которые могут быть без префикса
+    if league_name.lower() == "standard" and f"{file_type}.csv" in zip_namelist:
+        return f"{file_type}.csv"
+    if league_name.lower() == "hardcore" and f"{file_type}.csv" in zip_namelist:
+        return f"{file_type}.csv"
+
+    # 3. Поиск для лиг типа "Hardcore X"
+    if "hardcore" in league_name.lower():
+        hc_match = f"Hardcore {league_name.replace('Hardcore ', '')}.{file_type}.csv"
+        if hc_match in zip_namelist:
+            return hc_match
+
+    # 4. Если ничего не найдено, возвращаем None
+    return None
 
 
 def parse_historical_currency(league: str, dump_date: Optional[str] = None) -> Optional[pd.DataFrame]:
     """
     Парсит дампы валюты из poe.ninja (ZIP архив с CSV).
-    
-    Args:
-        league: Имя лиги
-        dump_date: format: YYYY-MM-DD. Если None, получает последнюю доступную
-        
-    Returns:
-        DataFrame с данными валюты или None если ошибка
     """
+
     url = f"https://poe.ninja/poe1/api/data/dumps/dump?name={league}"
-    
+
     try:
-        logger.info(f"Fetching historical currency dump for league: {league}")
-        response = requests.get(url, timeout=60)
+        logger.info(f"Fetching historical currency dump for league: {league} from {url}")
+        response = requests.get(url, headers=HEADERS, timeout=60)
         response.raise_for_status()
-        
-        # Read ZIP file from response
+
         with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
-            # Look for currency.csv
-            if 'currency.csv' not in zip_ref.namelist():
-                logger.warning(f"currency.csv not found in dump for {league}")
+            # --- ИЗМЕНЕНИЕ ЗДЕСЬ: ИСПОЛЬЗУЕМ НОВУЮ ФУНКЦИЮ ДЛЯ ПОИСКА ИМЕНИ ФАЙЛА ---
+            currency_csv_filename = _find_csv_filename_in_zip(zip_ref.namelist(), league, 'currency')
+
+            if not currency_csv_filename:
+                logger.warning(
+                    f"No suitable currency CSV found in dump for {league}. Available files: {zip_ref.namelist()}")
                 return None
-            
-            # Read CSV with semicolon separator
-            with zip_ref.open('currency.csv') as csv_file:
+
+            with zip_ref.open(currency_csv_filename) as csv_file:  # Используем найденное имя файла
                 df = pd.read_csv(csv_file, sep=';')
-                
-                # Transform data to match database schema
+
                 result = []
                 for _, row in df.iterrows():
                     result.append({
                         'league_name': league,
-                        'currency_name': row.get('currencyTypeName'),
+                        'currency_name': row.get('name'),
                         'details_id': row.get('detailsId'),
                         'chaos_equivalent': row.get('chaosEquivalent'),
-                        'pay_value': row.get('pay', {}).get('value') if isinstance(row.get('pay'), dict) else None,
-                        'receive_value': row.get('receive', {}).get('value') if isinstance(row.get('receive'), dict) else None,
-                        'trade_count': row.get('pay', {}).get('count') if isinstance(row.get('pay'), dict) else 0
+                        'pay_value': row.get('pay_chaosValue'),
+                        'receive_value': row.get('receive_chaosValue'),
+                        'trade_count': row.get('tradeCount')
                     })
-                
+
                 result_df = pd.DataFrame(result)
-                logger.info(f"Successfully parsed {len(result_df)} historical currency entries for {league}")
+                logger.info(
+                    f"Successfully parsed {len(result_df)} historical currency entries for {league} from {currency_csv_filename}")
                 return result_df
-                
+
     except requests.exceptions.Timeout:
-        logger.error(f"Timeout fetching historical currency dump for {league}")
+        logger.error(f"Timeout fetching historical currency dump for {league} from {url}")
         return None
     except requests.exceptions.RequestException as e:
-        logger.error(f"Request error fetching historical currency dump for {league}: {e}")
+        logger.error(f"Request error fetching historical currency dump for {league} from {url}: {e}")
+        return None
+    except zipfile.BadZipFile:
+        logger.error(f"Downloaded file for {league} is not a valid ZIP archive from {url}", exc_info=True)
         return None
     except Exception as e:
-        logger.error(f"Error parsing historical currency for {league}: {e}", exc_info=True)
+        logger.error(f"Error parsing historical currency for {league} from {url}: {e}", exc_info=True)
         return None
 
 
 def parse_historical_items(league: str, dump_date: Optional[str] = None) -> Optional[pd.DataFrame]:
     """
     Парсит дампы предметов из poe.ninja (ZIP архив с CSV).
-    
-    Args:
-        league: Имя лиги
-        dump_date: format: YYYY-MM-DD. Если None, получает последнюю доступную
-        
-    Returns:
-        DataFrame с данными предметов или None если ошибка
     """
-    url = f"https://poe.ninja/poe1/api/data/dumps/dump?name={league}"
-    
+
+    url = f"https://poe.ninja/poe1/api/data/dumps/dump?name={league}"  # Убедитесь, что здесь тоже правильный URL
+
     try:
-        logger.info(f"Fetching historical items dump for league: {league}")
-        response = requests.get(url, timeout=60)
+        logger.info(f"Fetching historical items dump for league: {league} from {url}")
+        response = requests.get(url, headers=HEADERS, timeout=60)
         response.raise_for_status()
-        
+
         with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
-            if 'items.csv' not in zip_ref.namelist():
-                logger.warning(f"items.csv not found in dump for {league}")
+            # --- ИЗМЕНЕНИЕ ЗДЕСЬ: ИСПОЛЬЗУЕМ НОВУЮ ФУНКЦИЮ ДЛЯ ПОИСКА ИМЕНИ ФАЙЛА ---
+            items_csv_filename = _find_csv_filename_in_zip(zip_ref.namelist(), league, 'items')
+
+            if not items_csv_filename:
+                logger.warning(
+                    f"No suitable items CSV found in dump for {league}. Available files: {zip_ref.namelist()}")
                 return None
-            
-            with zip_ref.open('items.csv') as csv_file:
+
+            with zip_ref.open(items_csv_filename) as csv_file:  # Используем найденное имя файла
                 df = pd.read_csv(csv_file, sep=';')
-                
+
                 result = []
                 for _, row in df.iterrows():
                     result.append({
@@ -104,55 +136,53 @@ def parse_historical_items(league: str, dump_date: Optional[str] = None) -> Opti
                         'links': row.get('links'),
                         'details_id': row.get('detailsId')
                     })
-                
+
                 result_df = pd.DataFrame(result)
-                logger.info(f"Successfully parsed {len(result_df)} historical item entries for {league}")
+                logger.info(
+                    f"Successfully parsed {len(result_df)} historical item entries for {league} from {items_csv_filename}")
                 return result_df
-                
+
     except requests.exceptions.Timeout:
-        logger.error(f"Timeout fetching historical items dump for {league}")
+        logger.error(f"Timeout fetching historical items dump for {league} from {url}")
         return None
     except requests.exceptions.RequestException as e:
-        logger.error(f"Request error fetching historical items dump for {league}: {e}")
+        logger.error(f"Request error fetching historical items dump for {league} from {url}: {e}")
+        return None
+    except zipfile.BadZipFile:
+        logger.error(f"Downloaded file for {league} is not a valid ZIP archive from {url}", exc_info=True)
         return None
     except Exception as e:
-        logger.error(f"Error parsing historical items for {league}: {e}", exc_info=True)
+        logger.error(f"Error parsing historical items for {league} from {url}: {e}", exc_info=True)
         return None
 
 
 def parse_historical_cards(league: str, dump_date: Optional[str] = None) -> Optional[pd.DataFrame]:
     """
     Парсит дампы карт с poe.ninja (ZIP архив с CSV).
-    
-    Args:
-        league: Name of the league
-        dump_date: format: YYYY-MM-DD. Если None, получает последнюю доступную
-        
-    Returns:
-        DataFrame с данными карт или None если ошибка
     """
-    url = f"https://poe.ninja/poe1/api/data/dumps/dump?name={league}"
-    
+
+    url = f"https://poe.ninja/poe1/api/data/dumps/dump?name={league}"  # Убедитесь, что здесь тоже правильный URL
+
     try:
-        logger.info(f"Fetching historical divination cards dump for league: {league}")
-        response = requests.get(url, timeout=60)
+        logger.info(f"Fetching historical divination cards dump for league: {league} from {url}")
+        response = requests.get(url, headers=HEADERS, timeout=60)
         response.raise_for_status()
-        
-        # Read ZIP file from response
+
         with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
-            # Look for items.csv (divination cards are in items.csv)
-            if 'items.csv' not in zip_ref.namelist():
-                logger.warning(f"items.csv not found in dump for {league}")
+            # --- ИЗМЕНЕНИЕ ЗДЕСЬ: ИСПОЛЬЗУЕМ НОВУЮ ФУНКЦИЮ ДЛЯ ПОИСКА ИМЕНИ ФАЙЛА ---
+            items_csv_filename = _find_csv_filename_in_zip(zip_ref.namelist(), league,
+                                                           'items')  # Карты тоже в items.csv
+
+            if not items_csv_filename:
+                logger.warning(
+                    f"No suitable items CSV found for divination cards in dump for {league}. Available files: {zip_ref.namelist()}")
                 return None
-            
-            # Read CSV with semicolon separator
-            with zip_ref.open('items.csv') as csv_file:
+
+            with zip_ref.open(items_csv_filename) as csv_file:  # Используем найденное имя файла
                 df = pd.read_csv(csv_file, sep=';')
-                
-                # Filter for divination cards only
-                df_cards = df[df.get('itemType') == 'DivinationCard']
-                
-                # Transform data to match database schema
+
+                df_cards = df[df.get('Type') == 'DivinationCard']
+
                 result = []
                 for _, row in df_cards.iterrows():
                     result.append({
@@ -160,22 +190,27 @@ def parse_historical_cards(league: str, dump_date: Optional[str] = None) -> Opti
                         'card_name': row.get('name'),
                         'stack_size': row.get('stackSize'),
                         'chaos_value': row.get('chaosValue'),
-                        'trade_count': row.get('tradeInfo', {}).get('count') if isinstance(row.get('tradeInfo'), dict) else 0,
+                        'trade_count': row.get('tradeCount'),
                         'details_id': row.get('detailsId')
                     })
-                
+
                 result_df = pd.DataFrame(result)
-                logger.info(f"Successfully parsed {len(result_df)} historical divination card entries for {league}")
+                logger.info(
+                    f"Successfully parsed {len(result_df)} historical divination card entries for {league} from {items_csv_filename}")
                 return result_df
-                
+
     except requests.exceptions.Timeout:
-        logger.error(f"Timeout fetching historical divination cards dump for {league}")
+        logger.error(f"Timeout fetching historical divination cards dump for {league} from {url}")
         return None
     except requests.exceptions.RequestException as e:
-        logger.error(f"Request error fetching historical divination cards dump for {league}: {e}")
+        logger.error(f"Request error fetching historical divination cards dump for {league} from {url}: {e}")
+        return None
+    except zipfile.BadZipFile:
+        logger.error(f"Downloaded file for {league} is not a valid ZIP archive from {url}", exc_info=True)
         return None
     except Exception as e:
-        logger.error(f"Error parsing historical divination cards for {league}: {e}", exc_info=True)
+        logger.error(f"Error parsing historical divination cards for {league} from {url}: {e}", exc_info=True)
         return None
+
 
 

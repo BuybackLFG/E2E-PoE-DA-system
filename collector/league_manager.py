@@ -1,7 +1,5 @@
 import logging
 from typing import Optional, List, Dict
-from datetime import datetime
-import requests
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
@@ -9,25 +7,24 @@ logger = logging.getLogger(__name__)
 
 
 class LeagueManager:
-    """Управляет лигами Path of Exile. Позволяет получать и создавать лиги в базе данных.
-    Позволяет полчать лиги через API poe.ninja."""
-    
+    """Управляет лигами Path of Exile. Позволяет получать и создавать лиги в базе данных."""
+
     def __init__(self, engine: Engine):
         """
         Инициализирует LeagueManager c базой данных
-        
+
         Args:
             engine: SQLAlchemy database engine
         """
         self.engine = engine
-    
+
     def get_league_id(self, league_name: str) -> Optional[int]:
         """
         Получает ID лиги из базы данных
-        
+
         Args:
             league_name: Имя лиги
-            
+
         Returns:
             ID лиги или None
         """
@@ -44,26 +41,25 @@ class LeagueManager:
         except Exception as e:
             logger.error(f"Error fetching league ID for {league_name}: {e}", exc_info=True)
             return None
-    
+
     def get_or_create_league(self, league_name: str, status: str = 'Active') -> Optional[int]:
         """
         Получет текущую лигу или создает новую
-        
+
         Args:
             league_name: Имя лиги
             status: Статус лиги ('Active' или 'Expired')
-            
+
         Returns:
             ID лиги или None
         """
         try:
-            
+
             league_id = self.get_league_id(league_name)
             if league_id:
-                logger.info(f"Found existing league: {league_name} (ID: {league_id})")
+                logger.debug(f"Found existing league: {league_name} (ID: {league_id})")  # Изменено на debug
                 return league_id
-            
-            
+
             with self.engine.connect() as conn:
                 result = conn.execute(
                     text("""
@@ -77,18 +73,18 @@ class LeagueManager:
                 conn.commit()
                 logger.info(f"Created new league: {league_name} (ID: {league_id})")
                 return league_id
-                
+
         except Exception as e:
             logger.error(f"Error creating league {league_name}: {e}", exc_info=True)
             return None
-    
+
     def get_all_leagues(self, status: Optional[str] = None) -> List[Dict]:
         """
         Получает список всех лиг.
-        
+
         Args:
             status: Статус лиг ('Active' or 'Expired')
-            
+
         Returns:
             Лист словарей с лигами
         """
@@ -96,14 +92,15 @@ class LeagueManager:
             with self.engine.connect() as conn:
                 if status:
                     result = conn.execute(
-                        text("SELECT id, league_name, status, start_date FROM leagues WHERE status = :status ORDER BY start_date DESC"),
+                        text(
+                            "SELECT id, league_name, status, start_date FROM leagues WHERE status = :status ORDER BY start_date DESC"),
                         {"status": status}
                     )
                 else:
                     result = conn.execute(
                         text("SELECT id, league_name, status, start_date FROM leagues ORDER BY start_date DESC")
                     )
-                
+
                 leagues = []
                 for row in result:
                     leagues.append({
@@ -113,19 +110,19 @@ class LeagueManager:
                         'start_date': row[3]
                     })
                 return leagues
-                
+
         except Exception as e:
             logger.error(f"Error fetching leagues: {e}", exc_info=True)
             return []
-    
+
     def update_league_status(self, league_name: str, status: str) -> bool:
         """
         Обновлялет статус лиги
-        
+
         Args:
             league_name: Имя лиги
             status: Новый статус ('Active' или 'Expired')
-            
+
         Returns:
             True если успешно, False если не удалось
         """
@@ -142,53 +139,3 @@ class LeagueManager:
             logger.error(f"Error updating league status: {e}", exc_info=True)
             return False
 
-
-def fetch_available_leagues_from_ninja() -> Optional[List[str]]:
-    """
-    Получает список доступных лиг через API poe.ninja
-    
-    Returns:
-        Список доступных лиг
-    """
-    url = 'https://poe.ninja/poe1/data'
-    
-    try:
-        logger.info(f"Fetching available leagues from {url}")
-        response = requests.get(url, timeout=30)
-        response.raise_for_status()
-        
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        leagues = set()
-        for link in soup.find_all('a', href=True):
-            href = link['href']
-            if '/poe1/api/data/dumps/dump?name=' in href:
-                league_name = href.split('name=')[-1]
-                if league_name:
-                    leagues.add(league_name)
-        
-        league_list = sorted(list(leagues), reverse=True)  # сначала новейшая
-        logger.info(f"Found {len(league_list)} available leagues from poe.ninja")
-        return league_list
-        
-    except requests.exceptions.Timeout:
-        logger.error(f"Timeout fetching leagues from {url}")
-        return None
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Request error fetching leagues: {e}")
-        return None
-    except Exception as e:
-        logger.error(f"Error fetching available leagues: {e}", exc_info=True)
-        return None
-
-
-def get_latest_league_from_wiki() -> Optional[str]:
-    """
-    полуает последнюю лигу из poe.wiki
-    
-    Returns:
-        название лиги или None
-    """
-    from parsers.league_finder import get_latest_league
-    return get_latest_league()

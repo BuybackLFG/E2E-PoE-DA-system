@@ -28,12 +28,15 @@ def parse_currency(league: str) -> Optional[pd.DataFrame]:
         
         result = []
         for line in lines:
+            raw_pay_value = line.get('pay', {}).get('value')
+            inverse_pay_value = None
+            if raw_pay_value is not None and raw_pay_value != 0:
+                inverse_pay_value = 1 / raw_pay_value
             result.append({
-                'league_name': league,
                 'currency_name': line.get('currencyTypeName'),
                 'details_id': line.get('detailsId'),
                 'chaos_equivalent': line.get('chaosEquivalent'),
-                'pay_value': line.get('pay', {}).get('value') if line.get('pay') else None,
+                'pay_value': inverse_pay_value,
                 'receive_value': line.get('receive', {}).get('value') if line.get('receive') else None,
                 'trade_count': line.get('pay', {}).get('count') if line.get('pay') else 0
             })
