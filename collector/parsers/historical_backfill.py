@@ -196,54 +196,45 @@ class HistoricalBackfiller:
                 logger.debug(f"Сопоставлено {api_name} -> id={api_id}")
         
         return name_to_id_map
-    
-    def _backfill_single_currency(self, currency_name: str, api_id: int, 
-                                   max_days_back: int) -> int:
-        """
-        Заполнить исторические данные для одной валюты.
-        
-        Args:
-            currency_name: Название валюты
-            api_id: API ID валюты
-            max_days_back: Максимальное количество дней для просмотра назад
-            
-        Returns:
-            Количество вставленных записей
-        """
-        # Получить существующие даты для этой валюты
-        existing_dates = self._get_existing_currency_dates(currency_name)
-        
-        # Получить исторические данные из API
+
+    def _backfill_single_currency(self, currency_name: str, api_id: int, max_days_back: int) -> int:
         historical_data = self._fetch_currency_history(api_id)
-        if not historical_data:
+        if not historical_data or not isinstance(historical_data, dict):
             return 0
-        
-        # Обработать и отфильтровать данные
+
+        receive_graph = historical_data.get("receiveCurrencyGraphData", [])
+        pay_graph = historical_data.get("payCurrencyGraphData", [])
+
+        # Делаем словарь {daysAgo → данные} для быстрого доступа
+        receive_by_day = {e['daysAgo']: e for e in receive_graph if 'daysAgo' in e}
+        pay_by_day = {e['daysAgo']: e for e in pay_graph if 'daysAgo' in e}
+
         records_to_insert = []
         today = datetime.now().date()
-        
-        for entry in historical_data:
-            days_ago = entry.get('daysAgo')
-            if days_ago is None or days_ago > max_days_back:
+
+        # Берём все возможные дни из обоих источников
+        all_days = set(receive_by_day.keys()) | set(pay_by_day.keys())
+
+        for days_ago in sorted(all_days):
+            if days_ago > max_days_back:
                 continue
-            
-            # Вычислить дату для этой записи
+
             entry_date = today - timedelta(days=days_ago)
-            
-            # Проверить, есть ли уже данные за эту дату
-            if entry_date in existing_dates:
+
+            if entry_date in self._get_existing_currency_dates(currency_name):
                 continue
-            
-            # Вычислить значения
-            record = self._process_currency_entry(entry, currency_name, entry_date)
+
+            pay_entry = pay_by_day.get(days_ago)
+            receive_entry = receive_by_day.get(days_ago)
+
+            record = self._process_currency_entry_both(pay_entry, receive_entry, currency_name, entry_date)
             if record:
                 records_to_insert.append(record)
-        
-        # Вставить записи в базу данных
+
         if records_to_insert:
             self._insert_currency_records(records_to_insert)
             logger.info(f"Вставлено {len(records_to_insert)} записей для {currency_name}")
-        
+
         return len(records_to_insert)
     
     def _get_existing_currency_dates(self, currency_name: str) -> set:
@@ -300,73 +291,51 @@ class HistoricalBackfiller:
         except Exception as e:
             logger.error(f"Ошибка при получении истории валюты: {e}", exc_info=True)
             return None
-    
-    def _process_currency_entry(self, entry: Dict, currency_name: str, 
-                                entry_date: datetime.date) -> Optional[Dict]:
-        """
-        Обработать одну историческую запись валюты.
-        
-        Args:
-            entry: Необработанная запись из API
-            currency_name: Название валюты
-            entry_date: Дата для этой записи
-            
-        Returns:
-            Обработанный словарь записи или None
-        """
-        try:
-            pay_data = entry.get('payCurrencyGraphData', [{}])[0]
-            receive_data = entry.get('receiveCurrencyGraphData', [{}])[0]
-            
-            # Извлечь значения
-            pay_count = pay_data.get('count', 0)
-            pay_value = pay_data.get('value', 0)
-            receive_count = receive_data.get('count', 0)
-            receive_value = receive_data.get('value', 0)
-            
-            # Вычислить pay_value (1/value если value > 0)
-            calculated_pay_value = None
-            if pay_value and pay_value > 0:
-                calculated_pay_value = 1 / pay_value
-            
-            # Вычислить receive_value (count/value если value > 0)
-            calculated_receive_value = None
-            if receive_value and receive_value > 0:
-                calculated_receive_value = receive_count / receive_value
-            
-            # Вычислить chaos_equivalent как среднее между pay и receive значениями
-            chaos_equivalent = None
-            if calculated_pay_value is not None and calculated_receive_value is not None:
-                chaos_equivalent = round((calculated_pay_value + calculated_receive_value) / 2)
-            elif calculated_pay_value is not None:
-                chaos_equivalent = round(calculated_pay_value)
-            elif calculated_receive_value is not None:
-                chaos_equivalent = round(calculated_receive_value)
-            
-            # Вычислить trade_count
-            trade_count = 0
-            if calculated_receive_value is not None:
-                trade_count += receive_count
-            if calculated_pay_value is not None:
-                trade_count += (1 / pay_value) if pay_value > 0 else 0
-            
-            # Создать запись
-            record = {
-                'timestamp': datetime.combine(entry_date, datetime.min.time()),
-                'league_id': self.league_id,
-                'currency_name': currency_name,
-                'details_id': None,  # Недоступно в историческом API
-                'chaos_equivalent': chaos_equivalent,
-                'pay_value': calculated_pay_value,
-                'receive_value': calculated_receive_value,
-                'trade_count': int(trade_count) if trade_count else None
-            }
-            
-            return record
-            
-        except Exception as e:
-            logger.error(f"Ошибка при обработке записи валюты: {e}", exc_info=True)
+
+    def _process_currency_entry_both(self, pay_entry: Dict | None, receive_entry: Dict | None,
+                                     currency_name: str, entry_date: datetime.date) -> Optional[Dict]:
+        if not pay_entry and not receive_entry:
             return None
+
+        pay_value = pay_entry.get('value', 0) if pay_entry else 0
+        pay_count = pay_entry.get('count', 0) if pay_entry else 0
+
+        receive_value = receive_entry.get('value', 0) if receive_entry else 0
+        receive_count = receive_entry.get('count', 0) if receive_entry else 0
+
+        values = []
+        weights = []
+
+        # Покупаем (pay) → сколько хаоса просят за 1 шт
+        if pay_value > 0:
+            values.append(1 / pay_value)
+            weights.append(pay_count or 1)
+
+        # Продаём (receive) → сколько хаоса дают за 1 шт
+        if receive_value > 0 and receive_count > 0:
+            values.append(receive_value)
+            weights.append(receive_count)
+
+        if not values:
+            return None
+
+        # Самый простой и популярный вариант — просто среднее
+        chaos_equivalent = sum(values) / len(values)
+
+        # Или взвешенное (часто лучше)
+        # chaos_equivalent = sum(v * w for v, w in zip(values, weights)) / sum(weights)
+
+        return {
+            'timestamp': datetime.combine(entry_date, datetime.min.time()),
+            'league_id': self.league_id,
+            'currency_name': currency_name,
+            'details_id': None,
+            'chaos_equivalent': round(chaos_equivalent, 6),
+            'pay_value': round(1 / pay_value, 6) if pay_value > 0 else None,
+            'receive_value': round(receive_value,
+                                   6) if receive_value > 0 and receive_count > 0 else None,
+            'trade_count': max(pay_count, receive_count) if pay_count or receive_count else None
+        }
     
     def _insert_currency_records(self, records: List[Dict]):
         """
