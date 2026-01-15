@@ -1,13 +1,13 @@
+# league_finder.py
 import logging
-from typing import Optional, List, Dict, Tuple
-from datetime import datetime
+from typing import Optional, List, Dict, Tuple, Any  # Добавил Any
+from datetime import datetime, timedelta  # Добавил timedelta
 import requests
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
 
-# Вспомогательная функция для парсинга дат
 def _parse_date(date_str: str) -> datetime:
     """
     Парсит строку даты из poewiki.net в объект datetime.
@@ -23,16 +23,16 @@ def _parse_date(date_str: str) -> datetime:
     return datetime.min
 
 
-def get_recent_leagues_from_wiki(num_leagues: int = 5) -> List[str]:
+def get_recent_leagues_from_wiki(num_leagues: int = 5) -> List[Dict[str, Any]]:  # Изменили тип возвращаемого значения
     """
-    Получает названия последних N лиг Path of Exile с poewiki.net.
+    Получает информацию о последних N лиг Path of Exile с poewiki.net.
 
     Args:
         num_leagues: Количество последних лиг для получения.
             По умолчанию 5.
 
     Returns:
-        Список названий последних N лиг (отсортированных от новой к старой)
+        Список словарей с информацией о лигах (name, start_date, status)
         или пустой список, если не удалось получить.
     """
     url = 'https://www.poewiki.net/wiki/League'
@@ -55,15 +55,14 @@ def get_recent_leagues_from_wiki(num_leagues: int = 5) -> List[str]:
         # Пропускаем заголовочную строку (rows[0])
         for row in rows[1:]:
             cells = row.find_all('td')
-            if cells and len(cells) > 1:  # Убедимся, что есть как минимум имя и дата
+            if cells and len(cells) > 1:
                 league_name_raw = cells[0].text.strip()
-                # Извлекаем только основное имя лиги (например, "Keepers" из "Keepers (Hardcore)")
                 league_name = league_name_raw.split(' ')[0].split('(')[0].strip()
                 release_date_str = cells[1].text.strip()
 
                 all_leagues_data.append({
-                    'League': league_name,
-                    'Release Date': _parse_date(release_date_str)
+                    'name': league_name,  # Изменил ключ League на name
+                    'start_date': _parse_date(release_date_str)
                 })
 
         if not all_leagues_data:
@@ -71,22 +70,36 @@ def get_recent_leagues_from_wiki(num_leagues: int = 5) -> List[str]:
             return []
 
         # Сортируем лиги по дате выпуска в убывающем порядке (самые новые первыми)
-        all_leagues_data.sort(key=lambda x: x['Release Date'], reverse=True)
+        all_leagues_data.sort(key=lambda x: x['start_date'], reverse=True)
 
         # Извлекаем уникальные имена лиг и берем N самых новых
-        # Это нужно, потому что wiki может перечислять "Standard" или "Hardcore" как отдельные записи
-        recent_unique_leagues = []
+        recent_unique_leagues_info = []
         seen_league_names = set()
-        for league_data in all_leagues_data:
-            name = league_data['League']
-            if name and name not in seen_league_names:  # Проверяем, что имя не пустое
-                recent_unique_leagues.append(name)
+
+        # Определяем текущую дату для определения статуса
+        now = datetime.now()
+
+        for i, league_data in enumerate(all_leagues_data):
+            name = league_data['name']
+            start_date = league_data['start_date']
+
+            # Предполагаем, что самая новая лига - активна, остальные - истекли.
+            # Это упрощение, но для большинства случаев достаточно.
+            # Более точное определение статуса требует знания даты окончания лиги.
+            status = 'Active' if i == 0 else 'Expired'  # Первая (самая новая) лига считается активной
+
+            if name and name not in seen_league_names:
+                recent_unique_leagues_info.append({
+                    'name': name,
+                    'start_date': start_date,
+                    'status': status
+                })
                 seen_league_names.add(name)
-            if len(recent_unique_leagues) >= num_leagues:
+            if len(recent_unique_leagues_info) >= num_leagues:
                 break
 
-        logger.info(f"Successfully retrieved {len(recent_unique_leagues)} recent leagues: {recent_unique_leagues}")
-        return recent_unique_leagues
+        logger.info(f"Successfully retrieved {len(recent_unique_leagues_info)} recent leagues.")
+        return recent_unique_leagues_info
 
     except requests.exceptions.Timeout:
         logger.error(f"Timeout fetching leagues from {url}")
@@ -107,6 +120,6 @@ def get_latest_league() -> Optional[str]:
     Returns:
         Название последней лиги или None, если не удалось получить.
     """
-    recent_leagues = get_recent_leagues_from_wiki(num_leagues=1)
-    return recent_leagues[0] if recent_leagues else None
+    recent_leagues_info = get_recent_leagues_from_wiki(num_leagues=1)
+    return recent_leagues_info[0]['name'] if recent_leagues_info else None
 

@@ -1,6 +1,6 @@
 import pandas as pd
 import logging
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Set
 import requests
 import io
 import zipfile
@@ -100,32 +100,44 @@ def parse_historical_currency(league: str, dump_date: Optional[str] = None) -> O
         return None
 
 
-def parse_historical_items(league: str, dump_date: Optional[str] = None) -> Optional[pd.DataFrame]:
+def parse_historical_items(
+        league: str,
+        allowed_types: Optional[Set[str]] = None,
+        dump_date: Optional[str] = None
+) -> Optional[pd.DataFrame]:
     """
-    Парсит дампы предметов из poe.ninja (ZIP архив с CSV).
-    """
+    Парсит items.csv, возвращая только записи с указанными типами.
 
-    url = f"https://poe.ninja/poe1/api/data/dumps/dump?name={league}"  # Убедитесь, что здесь тоже правильный URL
+    Args:
+        allowed_types: если None — возвращает все типы кроме DivinationCard
+                       если передан set — возвращает только эти типы
+    """
+    url = f"https://poe.ninja/poe1/api/data/dumps/dump?name={league}"
 
     try:
-        logger.info(f"Fetching historical items dump for league: {league} from {url}")
+        logger.info(f"Fetching items dump for {league}")
         response = requests.get(url, headers=HEADERS, timeout=60)
         response.raise_for_status()
 
         with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
-            # --- ИЗМЕНЕНИЕ ЗДЕСЬ: ИСПОЛЬЗУЕМ НОВУЮ ФУНКЦИЮ ДЛЯ ПОИСКА ИМЕНИ ФАЙЛА ---
-            items_csv_filename = _find_csv_filename_in_zip(zip_ref.namelist(), league, 'items')
-
-            if not items_csv_filename:
-                logger.warning(
-                    f"No suitable items CSV found in dump for {league}. Available files: {zip_ref.namelist()}")
+            filename = _find_csv_filename_in_zip(zip_ref.namelist(), league, 'items')
+            if not filename:
+                logger.warning(f"items.csv not found for {league}")
                 return None
 
-            with zip_ref.open(items_csv_filename) as csv_file:  # Используем найденное имя файла
+            with zip_ref.open(filename) as csv_file:
                 df = pd.read_csv(csv_file, sep=';')
 
+                # ── Фильтрация ───────────────────────────────────────────────
+                if allowed_types is None:
+                    allowed_types={"UniqueAccessory", "UniqueJewel", "UniqueWeapon", "UniqueArmour"}
+                mask = df['Type'].isin(allowed_types)
+
+                df_filtered = df[mask].copy()
+
+
                 result = []
-                for _, row in df.iterrows():
+                for _, row in df_filtered.iterrows():
                     result.append({
                         'league_name': league,
                         'item_name': row.get('name'),
@@ -138,8 +150,10 @@ def parse_historical_items(league: str, dump_date: Optional[str] = None) -> Opti
                     })
 
                 result_df = pd.DataFrame(result)
-                logger.info(
-                    f"Successfully parsed {len(result_df)} historical item entries for {league} from {items_csv_filename}")
+
+                logger.info(f"Parsed {len(result_df)} items for {league} "
+                            f"(allowed types: {allowed_types or 'all except DivCard'})")
+
                 return result_df
 
     except requests.exceptions.Timeout:

@@ -1,3 +1,4 @@
+# collector.py
 import os
 import time
 import logging
@@ -5,16 +6,15 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any  # Добавил Dict, Any
 
 from parsers.currency import parse_currency
 from parsers.cards import parse_cards
 from parsers.items import parse_items
-# Импортируем обе функции из league_finder
 from parsers.league_finder import get_latest_league, get_recent_leagues_from_wiki
 from parsers.historical import parse_historical_currency, parse_historical_items, parse_historical_cards
 from parsers.historical_backfill import HistoricalBackfiller
-from league_manager import LeagueManager  # fetch_available_leagues_from_ninja больше не нужен здесь
+from league_manager import LeagueManager
 
 load_dotenv()
 
@@ -24,14 +24,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Настройки базы из .env
 DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
 DB_NAME = os.getenv('DB_NAME')
 DB_HOST = os.getenv('DB_HOST', 'db')
 DB_PORT = os.getenv('DB_PORT', '5432')
 
-# Initialize database engine
 DB_URL = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 engine = None
 league_manager = None
@@ -42,7 +40,7 @@ def get_current_active_league() -> Optional[str]:
     Получает актуальную активную лигу из poewiki.net.
     """
     try:
-        latest = get_latest_league()  # Используем новую обертку из league_finder
+        latest = get_latest_league()
         if latest:
             logger.info(f"Latest active league from wiki: {latest}")
             return latest
@@ -53,8 +51,9 @@ def get_current_active_league() -> Optional[str]:
     return "Settlers"
 
 
+# --- ИЗМЕНЕНА ФУНКЦИЯ get_leagues_to_collect ---
 def get_leagues_to_collect(specific_league_name: Optional[str] = None, collect_historical_flag: bool = False) -> List[
-    Tuple[str, bool]]:
+    Dict[str, Any]]:  # Изменен тип возвращаемого значения
     """
     Получаем список лиг для которых потом будем собирать данные.
 
@@ -63,87 +62,122 @@ def get_leagues_to_collect(specific_league_name: Optional[str] = None, collect_h
         collect_historical_flag: Включать ли дампы старых лиг из wiki.
 
     Returns:
-        Список кортежей (имя_лиги, является_ли_исторической: bool)
+        Список словарей с информацией о лигах (name, is_historical, start_date, status)
     """
-    leagues_to_process: List[Tuple[str, bool]] = []
+    leagues_to_process: List[Dict[str, Any]] = []
 
-    current_active_league = get_current_active_league()
+    current_active_league_name = get_current_active_league()
+
+    # Для текущей активной лиги мы не знаем точную start_date и status из wiki,
+    # поэтому будем использовать значения по умолчанию при создании.
+    # Но если она есть в recent_wiki_leagues, мы возьмем данные оттуда.
 
     if specific_league_name:
         # Если указана конкретная лига, обрабатываем только ее.
-        # Считаем ее текущей для целей парсинга (не исторический API).
-        leagues_to_process.append((specific_league_name, False))
-    elif current_active_league:
-        # Всегда добавляем текущую активную лигу как неисторическую
-        leagues_to_process.append((current_active_league, False))
+        # Для нее мы не знаем start_date и status, поэтому используем дефолты.
+        leagues_to_process.append({
+            'name': specific_league_name,
+            'is_historical': False,
+            'start_date': None,  # Будет CURRENT_DATE в league_manager
+            'status': 'Active'  # Будет Active в league_manager
+        })
+    elif current_active_league_name:
+        leagues_to_process.append({
+            'name': current_active_league_name,
+            'is_historical': False,
+            'start_date': None,
+            'status': 'Active'
+        })
     else:
         logger.error("No current active league found and no specific league provided. Cannot collect data.")
         return []
 
     if collect_historical_flag:
-        # Получаем последние N лиг из wiki (включая текущую)
-        # Определите, сколько исторических лиг вы хотите собирать. Например, 5.
-        # Это будет включать текущую лигу, если она входит в топ N.
-        all_recent_wiki_leagues = get_recent_leagues_from_wiki(num_leagues=5)
+        all_recent_wiki_leagues_info = get_recent_leagues_from_wiki(num_leagues=5)
 
-        # Добавляем лиги из этого списка, которые еще не были добавлены (как текущая)
-        current_league_names_in_queue = {l[0] for l in leagues_to_process}
-        for wiki_league_name in all_recent_wiki_leagues:
-            if wiki_league_name not in current_league_names_in_queue:
-                leagues_to_process.append((wiki_league_name, True))  # Эти лиги будут обрабатываться как исторические
+        current_league_names_in_queue = {l['name'] for l in leagues_to_process}
+        for wiki_league_info in all_recent_wiki_leagues_info:
+            if wiki_league_info['name'] not in current_league_names_in_queue:
+                leagues_to_process.append({
+                    'name': wiki_league_info['name'],
+                    'is_historical': True,  # Эти лиги будут обрабатываться как исторические
+                    'start_date': wiki_league_info['start_date'],
+                    'status': wiki_league_info['status']
+                })
+            else:
+                # Если текущая активная лига уже была добавлена с дефолтными значениями,
+                # но теперь мы нашли ее в wiki, обновим ее данные.
+                for i, league_data in enumerate(leagues_to_process):
+                    if league_data['name'] == wiki_league_info['name']:
+                        leagues_to_process[i]['start_date'] = wiki_league_info['start_date']
+                        leagues_to_process[i]['status'] = wiki_league_info['status']
+                        # Если это была текущая лига, но она найдена в исторических,
+                        # то она все равно обрабатывается как текущая (is_historical=False)
+                        # но с правильными датой и статусом.
+                        break
 
-    # Удаляем дубликаты, сохраняя порядок и флаг
-    # Это нужно, если current_active_league уже был в списке all_recent_wiki_leagues
+    # Удаляем дубликаты, сохраняя порядок.
+    # Теперь каждый элемент - это словарь, поэтому `seen` будет хранить имена.
     final_leagues_to_process = []
-    seen = set()
-    for league_name, is_hist in leagues_to_process:
-        if league_name not in seen:
-            final_leagues_to_process.append((league_name, is_hist))
-            seen.add(league_name)
+    seen_names = set()
+    for league_data in leagues_to_process:
+        if league_data['name'] not in seen_names:
+            final_leagues_to_process.append(league_data)
+            seen_names.add(league_data['name'])
 
     return final_leagues_to_process
 
 
-def save_to_database(df, table_name, league_name: str):
+def _check_if_data_exists_for_league_and_table(league_id: int, table_name: str) -> bool:
+    """
+    Проверяет, существуют ли какие-либо записи для данного league_id в указанной таблице.
+    """
+    global engine
+    try:
+        with engine.connect() as conn:
+            query = text(f"SELECT EXISTS(SELECT 1 FROM {table_name} WHERE league_id = :league_id)")
+            result = conn.execute(query, {'league_id': league_id}).scalar()
+            return bool(result)
+    except SQLAlchemyError as e:
+        logger.error(f"Database error checking existing data for league_id {league_id} in {table_name}: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Unexpected error in _check_if_data_exists_for_league_and_table: {e}", exc_info=True)
+        return False
+
+
+def save_to_database(df, table_name, league_id: int):
     """
     Сохранить DataFrame в базу данных с правильным league_id.
 
     Args:
         df: Pandas DataFrame для сохранения
         table_name: Имя целевой таблицы
-        league_name: Имя лиги для получения league_id
+        league_id: ID лиги
 
     Returns:
         True при успехе, False в противном случае
     """
-    global engine, league_manager
+    global engine
 
     if df is None or df.empty:
-        logger.warning(f"Empty DataFrame provided for table {table_name} for league {league_name}")
+        logger.warning(f"Empty DataFrame provided for table {table_name} for league ID {league_id}")
         return False
 
     try:
-        # создает или получет лигу
-        league_id = league_manager.get_or_create_league(league_name)
-        if not league_id:
-            logger.error(f"Failed to get/create league: {league_name}")
-            return False
-
         df['league_id'] = league_id
 
-        # убирает столбец league_name (если есть... deprecated так как теперь все по ID) #TODO переделать позже
         if 'league_name' in df.columns:
             df = df.drop('league_name', axis=1)
 
-        # сохрание в дб
         df.to_sql(table_name, engine, if_exists='append', index=False)
-        logger.info(f"Successfully saved {len(df)} rows to {table_name} for league {league_name}")
+        logger.info(f"Successfully saved {len(df)} rows to {table_name} for league ID {league_id}")
         return True
     except SQLAlchemyError as e:
-        logger.error(f"Database error saving to {table_name} for league {league_name}: {e}")
+        logger.error(f"Database error saving to {table_name} for league ID {league_id}: {e}")
         return False
     except Exception as e:
-        logger.error(f"Unexpected error saving to {table_name} for league {league_name}: {e}")
+        logger.error(f"Unexpected error saving to {table_name} for league ID {league_id}: {e}")
         return False
 
 
@@ -155,13 +189,11 @@ def initialize_database():
         logger.info(f"Initializing database connection: postgresql://{DB_USER}:***@{DB_HOST}:{DB_PORT}/{DB_NAME}")
         engine = create_engine(DB_URL)
 
-        # Test connection
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
 
         logger.info("Database connection established successfully")
 
-        # Initialize league manager
         league_manager = LeagueManager(engine)
         logger.info("League manager initialized successfully")
 
@@ -171,54 +203,77 @@ def initialize_database():
         return False
 
 
-def collect_data_for_source(source_name, parser_func, league, table_name, use_historical=False):
+# --- ИЗМЕНЕНА ФУНКЦИЯ collect_data_for_source ---
+def collect_data_for_source(source_name, parser_func, league_info: Dict[str, Any], table_name):  # Изменен тип league
     """
     Получает данные для указанного источника и сохраняет их в базу данных
 
     Args:
         source_name: имя источника
         parser_func: функция парсинга (current API)
-        league: лига
+        league_info: Словарь с информацией о лиге (name, is_historical, start_date, status)
         table_name: имя целевой таблицы
-        use_historical: использовать исторические данные из dumps
 
     Returns:
         Кортеж (success: bool, records_count: int)
     """
-    logger.info(f"--- Starting {source_name} collection for {league} league (historical={use_historical}) ---")
+    global engine, league_manager
+
+    league_name_str = league_info['name']
+    use_historical = league_info['is_historical']
+    league_start_date = league_info['start_date']
+    league_status = league_info['status']
+
+    logger.info(
+        f"--- Starting {source_name} collection for {league_name_str} league (historical={use_historical}, status={league_status}, start_date={league_start_date}) ---")
+
+    # Получаем league_id, передавая все доступные метаданные
+    league_id = league_manager.get_or_create_league(
+        league_name_str,
+        status=league_status,
+        start_date=league_start_date
+    )
+    if not league_id:
+        logger.error(f"Failed to get/create league: {league_name_str}")
+        return (False, 0)
+
+    if use_historical:
+        if _check_if_data_exists_for_league_and_table(league_id, table_name):
+            logger.info(
+                f"Historical data for {source_name} in league {league_name_str} (ID: {league_id}) already exists. Skipping.")
+            return (True, 0)
 
     try:
         if use_historical:
-            # Для исторических лиг всегда используем парсеры из historical.py
             if source_name == 'Currency':
-                df = parse_historical_currency(league)
+                df = parse_historical_currency(league_name_str)
             elif source_name == 'Divination Cards':
-                df = parse_historical_cards(league)
+                df = parse_historical_cards(league_name_str)
             elif source_name == 'Unique Items':
-                df = parse_historical_items(league)
+                df = parse_historical_items(league_name_str)
             else:
                 logger.warning(f"Unknown source for historical parsing: {source_name}")
                 return (False, 0)
         else:
-            # Для текущей лиги используем обычные парсеры
-            df = parser_func(league)
+            df = parser_func(league_name_str)
 
         if df is None or df.empty:
-            logger.warning(f"No data received from {source_name} for league {league}")
+            logger.warning(f"No data received from {source_name} for league {league_name_str}")
             return (False, 0)
 
-        success = save_to_database(df, table_name, league)
+        success = save_to_database(df, table_name, league_id)
 
         if success:
-            logger.info(f"{source_name} updated successfully ({len(df)} records) for league {league}")
+            logger.info(f"{source_name} updated successfully ({len(df)} records) for league {league_name_str}")
             return (True, len(df))
         else:
-            logger.error(f"Failed to save {source_name} data to database for league {league}")
+            logger.error(f"Failed to save {source_name} data to database for league {league_name_str}")
             return (False, 0)
 
     except Exception as e:
-        logger.error(f"Error collecting {source_name} for league {league}: {e}", exc_info=True)
+        logger.error(f"Error collecting {source_name} for league {league_name_str}: {e}", exc_info=True)
         return (False, 0)
+
 
 
 def run_backfill_on_start():
@@ -284,7 +339,6 @@ def main():
         logger.error("Failed to initialize database. Exiting.")
         return
 
-    # Запустить заполнение исторических данных при старте (если включено)
     run_backfill_on_start()
 
     cycle_count = 0
@@ -297,32 +351,31 @@ def main():
         logger.info(f"=== Starting collection cycle #{cycle_count} ===")
 
         try:
-            # получает лиги для сбора (теперь возвращает (имя_лиги, флаг_историчности))
             leagues_to_process = get_leagues_to_collect(SPECIFIC_LEAGUE, COLLECT_HISTORICAL)
 
             # Логируем только имена лиг для читаемости
-            logger.info(f"Leagues to collect: {[l[0] for l in leagues_to_process]}")
+            logger.info(f"Leagues to collect: {[l['name'] for l in leagues_to_process]}")
 
             if not leagues_to_process:
                 logger.warning("No leagues to process in this cycle. Sleeping.")
 
-            for league_name, is_historical_for_this_league in leagues_to_process:
+            for league_info in leagues_to_process:  # Теперь league_info - это словарь
+                league_name = league_info['name']
+                is_historical_for_this_league = league_info['is_historical']
+
                 logger.info(f"\n{'=' * 60}")
                 logger.info(f"Processing league: {league_name} (historical={is_historical_for_this_league})")
                 logger.info(f"{'=' * 60}")
 
                 results = {
                     'currency': collect_data_for_source(
-                        'Currency', parse_currency, league_name, 'currency_prices',
-                        use_historical=is_historical_for_this_league
+                        'Currency', parse_currency, league_info, 'currency_prices'  # Передаем весь словарь league_info
                     ),
                     'cards': collect_data_for_source(
-                        'Divination Cards', parse_cards, league_name, 'divination_cards',
-                        use_historical=is_historical_for_this_league
+                        'Divination Cards', parse_cards, league_info, 'divination_cards'
                     ),
                     'items': collect_data_for_source(
-                        'Unique Items', parse_items, league_name, 'unique_items',
-                        use_historical=is_historical_for_this_league
+                        'Unique Items', parse_items, league_info, 'unique_items'
                     )
                 }
 
