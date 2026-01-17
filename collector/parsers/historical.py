@@ -158,7 +158,6 @@ def parse_historical_items(
                         'base_type': row.get('Type'),
                         'item_type': row.get('BaseType'),
                         'chaos_value': row.get('Value'),
-                        'links': row.get('Links'),
                         'timestamp': row.get('Date')
                     })
 
