@@ -71,22 +71,26 @@ def parse_historical_currency(league: str, dump_date: Optional[str] = None) -> O
 
                 result = []
                 for _, row in df.iterrows():
+                    # Защита от деления на ноль / NaN
+                    if pd.isna(row['Value']) or row['Value'] == 0:
+                        continue
+
                     if row['Pay'] == 'Chaos Orb' and row['Get'] != 'Chaos Orb':
                         currency_name = row['Get']
+                        chaos_equivalent = (row['Value'])
 
                     # Случай 2: получают хаосы
                     elif row['Get'] == 'Chaos Orb' and row['Pay'] != 'Chaos Orb':
                         currency_name = row['Pay']
+                        chaos_equivalent = (1/row['Value'])
 
                     # Все остальные случаи не интересуют
                     else:
                         continue
 
-                    # Защита от деления на ноль / NaN
-                    if pd.isna(row['Value']) or row['Value'] == 0:
-                        continue
 
-                    chaos_equivalent = (1 / row['Value'])
+
+
 
                     result.append({
                         'league_name': league,
