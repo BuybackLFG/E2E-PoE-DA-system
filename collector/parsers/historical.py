@@ -71,14 +71,28 @@ def parse_historical_currency(league: str, dump_date: Optional[str] = None) -> O
 
                 result = []
                 for _, row in df.iterrows():
+                    if row['Pay'] == 'Chaos Orb' and row['Get'] != 'Chaos Orb':
+                        currency_name = row['Get']
+
+                    # Случай 2: получают хаосы
+                    elif row['Get'] == 'Chaos Orb' and row['Pay'] != 'Chaos Orb':
+                        currency_name = row['Pay']
+
+                    # Все остальные случаи не интересуют
+                    else:
+                        continue
+
+                    # Защита от деления на ноль / NaN
+                    if pd.isna(row['Value']) or row['Value'] == 0:
+                        continue
+
+                    chaos_equivalent = (1 / row['Value'])
+
                     result.append({
                         'league_name': league,
-                        'currency_name': row.get('name'),
-                        'details_id': row.get('detailsId'),
-                        'chaos_equivalent': row.get('chaosEquivalent'),
-                        'pay_value': row.get('pay_chaosValue'),
-                        'receive_value': row.get('receive_chaosValue'),
-                        'trade_count': row.get('tradeCount')
+                        'currency_name': currency_name,
+                        'chaos_equivalent': chaos_equivalent,
+                        'timestamp': row['Date']
                     })
 
                 result_df = pd.DataFrame(result)
@@ -140,13 +154,12 @@ def parse_historical_items(
                 for _, row in df_filtered.iterrows():
                     result.append({
                         'league_name': league,
-                        'item_name': row.get('name'),
-                        'base_type': row.get('baseType'),
-                        'item_type': row.get('itemType'),
-                        'level_required': row.get('levelRequired'),
-                        'chaos_value': row.get('chaosValue'),
-                        'links': row.get('links'),
-                        'details_id': row.get('detailsId')
+                        'item_name': row.get('Name'),
+                        'base_type': row.get('Type'),
+                        'item_type': row.get('BaseType'),
+                        'chaos_value': row.get('Value'),
+                        'links': row.get('Links'),
+                        'timestamp': row.get('Date')
                     })
 
                 result_df = pd.DataFrame(result)
@@ -201,11 +214,9 @@ def parse_historical_cards(league: str, dump_date: Optional[str] = None) -> Opti
                 for _, row in df_cards.iterrows():
                     result.append({
                         'league_name': league,
-                        'card_name': row.get('name'),
-                        'stack_size': row.get('stackSize'),
-                        'chaos_value': row.get('chaosValue'),
-                        'trade_count': row.get('tradeCount'),
-                        'details_id': row.get('detailsId')
+                        'card_name': row.get('Name'),
+                        'chaos_value': row.get('Value'),
+                        'timestamp': row.get('Date')
                     })
 
                 result_df = pd.DataFrame(result)
@@ -225,6 +236,5 @@ def parse_historical_cards(league: str, dump_date: Optional[str] = None) -> Opti
     except Exception as e:
         logger.error(f"Error parsing historical divination cards for {league} from {url}: {e}", exc_info=True)
         return None
-
 
 
