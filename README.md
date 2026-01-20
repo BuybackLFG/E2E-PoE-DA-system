@@ -8,14 +8,14 @@
 E2E-PoE-DA-system/
 ├── collector/
 │   ├── collector.py              # Главный коллектор (текущие данные)
-│   ├── backfill_historical.py     # Скрипт для заполнения исторических данных
+│   ├── backfill_historical.py    # Скрипт для заполнения исторических данных
 │   ├── league_manager.py         # Управление лигами в дб
-│   ├── parsers/                  # парсеры
-│   │   ├── currency.py           # валют (текущие данные)
-│   │   ├── cards.py              # карт гаданий (текущие данные)
-│   │   ├── items.py              # уникальных предметов (текущие данные)
-│   │   ├── league_finder.py      # поиск последней лиги
-│   │   ├── historical.py         # дампы старых лиг (ZIP архивы)
+│   ├── parsers/                   # парсеры
+│   │   ├── currency.py            # валют (текущие данные)
+│   │   ├── cards.py               # карт гаданий (текущие данные)
+│   │   ├── items.py               # уникальных предметов (текущие данные)
+│   │   ├── league_finder.py       # поиск последней лиги
+│   │   ├── historical.py          # дампы старых лиг (ZIP архивы)
 │   │   └── historical_backfill.py # модуль для заполнения исторических данных
 │   ├── init-db/
 │   │   └── init.sql              # схема дб
@@ -23,6 +23,7 @@ E2E-PoE-DA-system/
 │   └── requirements.txt
 ├── docker-compose.yml
 ├── .env.example
+├── analys_and_prediction.ipynb   # анализ данных и прогноз цен дивайнов
 └── README.md
 ```
 
@@ -30,6 +31,8 @@ E2E-PoE-DA-system/
 
 - [poe.ninja](https://poe.ninja) - Источник данных экономики PoE
 - [poewiki.net](https://www.poewiki.net) - Информация по лигам
+## Дашборд
+![alt text](image.png)
 
 ## Функциональность
 
@@ -80,7 +83,7 @@ docker-compose up collector
 Скрипт для заполнения пропусков в исторических данных. Автоматически:
 
 - Находит ID предметов из текущего API poe.ninja
-- Сопоставляет их с названиями в вашей базе данных
+- Сопоставляет их с названиями в базе данных
 - Загружает исторические данные за прошедшие дни
 - Вычисляет отсутствующие значения (chaos_equivalent, trade_count)
 - Пропускает даты, которые уже есть в базе
