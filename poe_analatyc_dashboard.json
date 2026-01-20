@@ -1,0 +1,977 @@
+{
+  "id": 1,
+  "slug": "poe_analatyc",
+  "name": "Poe_analatyc",
+  "user_id": 1,
+  "user": {
+    "id": 1,
+    "name": "admin",
+    "email": "danil.urnov1999@gmail.com",
+    "profile_image_url": "https://www.gravatar.com/avatar/cd8f048411eb5e4e3b4f7efd99174622?s=40&d=identicon"
+  },
+  "layout": [],
+  "dashboard_filters_enabled": false,
+  "widgets": [
+    {
+      "id": 1,
+      "width": 1,
+      "options": {
+        "isHidden": false,
+        "position": {
+          "col": 0,
+          "row": 0,
+          "sizeX": 4,
+          "sizeY": 7,
+          "maxSizeX": 12,
+          "maxSizeY": 1000,
+          "minSizeX": 1,
+          "minSizeY": 5,
+          "autoHeight": false
+        },
+        "parameterMappings": {}
+      },
+      "dashboard_id": 1,
+      "text": "",
+      "updated_at": "2026-01-15T20:11:56.544Z",
+      "created_at": "2026-01-15T19:38:28.709Z",
+      "visualization": {
+        "id": 4,
+        "type": "CHART",
+        "name": "Chart",
+        "description": "",
+        "options": {
+          "sortX": true,
+          "xAxis": {
+            "type": "-",
+            "title": {
+              "text": "Время"
+            },
+            "labels": {
+              "enabled": true
+            }
+          },
+          "yAxis": [
+            {
+              "type": "linear",
+              "title": {
+                "text": "Стоимость в диванах"
+              },
+              "rangeMax": null,
+              "rangeMin": null
+            },
+            {
+              "type": "linear",
+              "opposite": true
+            }
+          ],
+          "legend": {
+            "enabled": true,
+            "placement": "below",
+            "traceorder": "normal"
+          },
+          "series": {
+            "error_y": {
+              "type": "data",
+              "visible": true
+            },
+            "stacking": null
+          },
+          "error_y": {
+            "type": "data",
+            "visible": true
+          },
+          "piesort": true,
+          "sizemode": "diameter",
+          "direction": {
+            "type": "counterclockwise"
+          },
+          "enableLink": false,
+          "linkFormat": "",
+          "textFormat": "",
+          "coefficient": 1,
+          "swappedAxes": false,
+          "color_scheme": "Redash",
+          "numberFormat": "0,0[.]00000",
+          "columnMapping": {
+            "timestamp": "x",
+            "divine_ratio": "y"
+          },
+          "percentFormat": "0[.]00%",
+          "seriesOptions": {},
+          "valuesOptions": {},
+          "dateTimeFormat": "DD/MM/YY HH:mm",
+          "linkOpenNewTab": true,
+          "showDataLabels": false,
+          "alignYAxesAtZero": false,
+          "globalSeriesType": "line",
+          "missingValuesAsZero": true
+        },
+        "updated_at": "2026-01-15T19:38:28.709Z",
+        "created_at": "2026-01-04T14:05:38.467Z",
+        "query": {
+          "id": 2,
+          "latest_query_data_id": 202,
+          "name": "график цены миррора в диванах",
+          "description": null,
+          "query": "SELECT\r\n  m.\"timestamp\",\r\n  m.chaos_equivalent AS mirror_chaos,\r\n  d.chaos_equivalent AS divine_chaos,\r\n  m.chaos_equivalent / d.chaos_equivalent AS divine_ratio\r\nFROM currency_prices m\r\nJOIN currency_prices d\r\n  ON m.\"timestamp\" = d.\"timestamp\"\r\n  AND d.currency_name = 'Divine Orb'\r\n  and d.league_id=1\r\nWHERE m.currency_name = 'Mirror of Kalandra'\r\nand d.league_id=1\r\nORDER BY m.\"timestamp\" ASC;\r\n",
+          "query_hash": "62bd9879ab8aafd9eb6a38d487a0976b",
+          "schedule": {
+            "time": null,
+            "until": null,
+            "interval": 1800,
+            "day_of_week": null
+          },
+          "api_key": "2JGoFSlE0B1VN3u0V98HRP2azM8nIRjvMCTxvIbL",
+          "is_archived": false,
+          "is_draft": false,
+          "updated_at": "2026-01-15T19:12:12.867Z",
+          "created_at": "2026-01-04T13:19:41.695Z",
+          "data_source_id": 2,
+          "options": {
+            "parameters": [],
+            "apply_auto_limit": true
+          },
+          "version": 1,
+          "tags": [],
+          "is_safe": true,
+          "user": {
+            "id": 1,
+            "name": "admin",
+            "email": "danil.urnov1999@gmail.com",
+            "profile_image_url": "https://www.gravatar.com/avatar/cd8f048411eb5e4e3b4f7efd99174622?s=40&d=identicon",
+            "groups": [
+              1,
+              2
+            ],
+            "updated_at": "2026-01-15T20:21:41.575Z",
+            "created_at": "2026-01-04T11:37:52.556Z",
+            "disabled_at": null,
+            "is_disabled": false,
+            "active_at": null,
+            "is_invitation_pending": false,
+            "is_email_verified": true,
+            "auth_type": "password"
+          },
+          "last_modified_by": {
+            "id": 1,
+            "name": "admin",
+            "email": "danil.urnov1999@gmail.com",
+            "profile_image_url": "https://www.gravatar.com/avatar/cd8f048411eb5e4e3b4f7efd99174622?s=40&d=identicon",
+            "groups": [
+              1,
+              2
+            ],
+            "updated_at": "2026-01-15T20:21:41.575Z",
+            "created_at": "2026-01-04T11:37:52.556Z",
+            "disabled_at": null,
+            "is_disabled": false,
+            "active_at": null,
+            "is_invitation_pending": false,
+            "is_email_verified": true,
+            "auth_type": "password"
+          }
+        }
+      }
+    },
+    {
+      "id": 10,
+      "width": 1,
+      "options": {
+        "isHidden": false,
+        "position": {
+          "col": 0,
+          "row": 7,
+          "sizeX": 4,
+          "sizeY": 7,
+          "maxSizeX": 12,
+          "maxSizeY": 1000,
+          "minSizeX": 1,
+          "minSizeY": 5,
+          "autoHeight": false
+        },
+        "parameterMappings": {}
+      },
+      "dashboard_id": 1,
+      "text": "",
+      "updated_at": "2026-01-15T20:24:28.132Z",
+      "created_at": "2026-01-15T20:24:11.040Z",
+      "visualization": {
+        "id": 13,
+        "type": "CHART",
+        "name": "Chart",
+        "description": "",
+        "options": {
+          "sortX": true,
+          "xAxis": {
+            "type": "-",
+            "title": {
+              "text": "дата"
+            },
+            "labels": {
+              "enabled": true
+            }
+          },
+          "yAxis": [
+            {
+              "type": "linear",
+              "title": {
+                "text": "Цена в хаосах"
+              }
+            },
+            {
+              "type": "linear",
+              "opposite": true
+            }
+          ],
+          "legend": {
+            "enabled": true,
+            "placement": "auto",
+            "traceorder": "normal"
+          },
+          "series": {
+            "error_y": {
+              "type": "data",
+              "visible": true
+            },
+            "stacking": null
+          },
+          "error_y": {
+            "type": "data",
+            "visible": true
+          },
+          "piesort": true,
+          "sizemode": "diameter",
+          "direction": {
+            "type": "counterclockwise"
+          },
+          "enableLink": false,
+          "linkFormat": "",
+          "textFormat": "",
+          "coefficient": 1,
+          "swappedAxes": false,
+          "color_scheme": "Redash",
+          "numberFormat": "0,0[.]00000",
+          "columnMapping": {
+            "timestamp": "x",
+            "chaos_equivalent": "y"
+          },
+          "percentFormat": "0[.]00%",
+          "seriesOptions": {},
+          "valuesOptions": {},
+          "dateTimeFormat": "DD/MM/YY HH:mm",
+          "linkOpenNewTab": true,
+          "showDataLabels": false,
+          "alignYAxesAtZero": false,
+          "globalSeriesType": "line",
+          "missingValuesAsZero": true
+        },
+        "updated_at": "2026-01-15T20:24:11.040Z",
+        "created_at": "2026-01-15T20:23:24.735Z",
+        "query": {
+          "id": 6,
+          "latest_query_data_id": 201,
+          "name": "График цены дивана в хаосах",
+          "description": null,
+          "query": "select\r\n  currency_name,\r\n  chaos_equivalent,\r\n  timestamp\r\nfrom\r\n  currency_prices\r\nwhere currency_name='Divine Orb'\r\nand league_id=1\r\norder by timestamp asc",
+          "query_hash": "ae3e2cf9155253fd521b5125d70c0cb6",
+          "schedule": null,
+          "api_key": "QF1y7jgMvwKdjg8zPw3wMwbZ1Q2uP8tHN6Na07BB",
+          "is_archived": false,
+          "is_draft": false,
+          "updated_at": "2026-01-15T20:23:42.972Z",
+          "created_at": "2026-01-15T20:21:41.575Z",
+          "data_source_id": 2,
+          "options": {
+            "parameters": [],
+            "apply_auto_limit": true
+          },
+          "version": 1,
+          "tags": [],
+          "is_safe": true,
+          "user": {
+            "id": 1,
+            "name": "admin",
+            "email": "danil.urnov1999@gmail.com",
+            "profile_image_url": "https://www.gravatar.com/avatar/cd8f048411eb5e4e3b4f7efd99174622?s=40&d=identicon",
+            "groups": [
+              1,
+              2
+            ],
+            "updated_at": "2026-01-15T20:21:41.575Z",
+            "created_at": "2026-01-04T11:37:52.556Z",
+            "disabled_at": null,
+            "is_disabled": false,
+            "active_at": null,
+            "is_invitation_pending": false,
+            "is_email_verified": true,
+            "auth_type": "password"
+          },
+          "last_modified_by": {
+            "id": 1,
+            "name": "admin",
+            "email": "danil.urnov1999@gmail.com",
+            "profile_image_url": "https://www.gravatar.com/avatar/cd8f048411eb5e4e3b4f7efd99174622?s=40&d=identicon",
+            "groups": [
+              1,
+              2
+            ],
+            "updated_at": "2026-01-15T20:21:41.575Z",
+            "created_at": "2026-01-04T11:37:52.556Z",
+            "disabled_at": null,
+            "is_disabled": false,
+            "active_at": null,
+            "is_invitation_pending": false,
+            "is_email_verified": true,
+            "auth_type": "password"
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "width": 1,
+      "options": {
+        "isHidden": false,
+        "position": {
+          "col": 4,
+          "row": 7,
+          "sizeX": 4,
+          "sizeY": 10,
+          "maxSizeX": 12,
+          "maxSizeY": 1000,
+          "minSizeX": 1,
+          "minSizeY": 5,
+          "autoHeight": false
+        },
+        "parameterMappings": {}
+      },
+      "dashboard_id": 1,
+      "text": "",
+      "updated_at": "2026-01-15T20:24:43.560Z",
+      "created_at": "2026-01-15T20:05:15.418Z",
+      "visualization": {
+        "id": 9,
+        "type": "CHART",
+        "name": "Chart",
+        "description": "",
+        "options": {
+          "sortX": false,
+          "xAxis": {
+            "type": "-",
+            "title": {
+              "text": "Имя предмета"
+            },
+            "labels": {
+              "enabled": true
+            }
+          },
+          "yAxis": [
+            {
+              "type": "linear",
+              "title": {
+                "text": "Относительное стандартное отклонение"
+              },
+              "rangeMax": 0.5,
+              "rangeMin": 0
+            },
+            {
+              "type": "linear",
+              "opposite": true
+            }
+          ],
+          "legend": {
+            "enabled": true,
+            "placement": "auto",
+            "traceorder": "normal"
+          },
+          "series": {
+            "error_y": {
+              "type": "data",
+              "visible": true
+            },
+            "stacking": null,
+            "percentValues": false
+          },
+          "error_y": {
+            "type": "data",
+            "visible": true
+          },
+          "piesort": true,
+          "reverseX": false,
+          "sizemode": "diameter",
+          "direction": {
+            "type": "counterclockwise"
+          },
+          "enableLink": false,
+          "linkFormat": "",
+          "textFormat": "",
+          "coefficient": 1,
+          "color_scheme": "Redash",
+          "numberFormat": "0,0[.]00000",
+          "columnMapping": {
+            "item_name": "x",
+            "rel_std_dev": "y"
+          },
+          "percentFormat": "0[.]00%",
+          "seriesOptions": {},
+          "valuesOptions": {},
+          "dateTimeFormat": "DD/MM/YY HH:mm",
+          "linkOpenNewTab": true,
+          "showDataLabels": false,
+          "alignYAxesAtZero": false,
+          "globalSeriesType": "column",
+          "missingValuesAsZero": true
+        },
+        "updated_at": "2026-01-15T20:10:44.077Z",
+        "created_at": "2026-01-15T20:03:12.074Z",
+        "query": {
+          "id": 5,
+          "latest_query_data_id": 204,
+          "name": "Самые стабильные предметы лиги, которые хоть что-то стоят",
+          "description": null,
+          "query": "SELECT\r\n    item_name,\r\n    ROUND(AVG(chaos_value), 2) AS avg_price,\r\n    ROUND(STDDEV(chaos_value), 2) AS std_deviation,\r\n    ROUND(STDDEV(chaos_value) / NULLIF(AVG(chaos_value), 0), 4) AS rel_std_dev\r\nFROM unique_items\r\nWHERE league_id = 1\r\nGROUP BY item_name\r\nHAVING AVG(chaos_value) > 20\r\nORDER BY rel_std_dev ASC\r\nLIMIT 10;\r\n",
+          "query_hash": "b7f6bcf76d97d5cf43a5766b15c02990",
+          "schedule": {
+            "time": null,
+            "until": null,
+            "interval": 1800,
+            "day_of_week": null
+          },
+          "api_key": "f5WIuBxzNbxBX3t2tfq3AUCRRK3TXwTBwkGihXCB",
+          "is_archived": false,
+          "is_draft": false,
+          "updated_at": "2026-01-15T20:03:26.100Z",
+          "created_at": "2026-01-15T19:34:26.451Z",
+          "data_source_id": 2,
+          "options": {
+            "parameters": [],
+            "apply_auto_limit": true
+          },
+          "version": 1,
+          "tags": [],
+          "is_safe": true,
+          "user": {
+            "id": 1,
+            "name": "admin",
+            "email": "danil.urnov1999@gmail.com",
+            "profile_image_url": "https://www.gravatar.com/avatar/cd8f048411eb5e4e3b4f7efd99174622?s=40&d=identicon",
+            "groups": [
+              1,
+              2
+            ],
+            "updated_at": "2026-01-15T20:21:41.575Z",
+            "created_at": "2026-01-04T11:37:52.556Z",
+            "disabled_at": null,
+            "is_disabled": false,
+            "active_at": null,
+            "is_invitation_pending": false,
+            "is_email_verified": true,
+            "auth_type": "password"
+          },
+          "last_modified_by": {
+            "id": 1,
+            "name": "admin",
+            "email": "danil.urnov1999@gmail.com",
+            "profile_image_url": "https://www.gravatar.com/avatar/cd8f048411eb5e4e3b4f7efd99174622?s=40&d=identicon",
+            "groups": [
+              1,
+              2
+            ],
+            "updated_at": "2026-01-15T20:21:41.575Z",
+            "created_at": "2026-01-04T11:37:52.556Z",
+            "disabled_at": null,
+            "is_disabled": false,
+            "active_at": null,
+            "is_invitation_pending": false,
+            "is_email_verified": true,
+            "auth_type": "password"
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "width": 1,
+      "options": {
+        "isHidden": false,
+        "position": {
+          "col": 8,
+          "row": 9,
+          "sizeX": 4,
+          "sizeY": 7,
+          "maxSizeX": 12,
+          "maxSizeY": 1000,
+          "minSizeX": 1,
+          "minSizeY": 5,
+          "autoHeight": false
+        },
+        "parameterMappings": {}
+      },
+      "dashboard_id": 1,
+      "text": "",
+      "updated_at": "2026-01-15T20:24:49.844Z",
+      "created_at": "2026-01-15T19:48:45.847Z",
+      "visualization": {
+        "id": 6,
+        "type": "CHART",
+        "name": "Chart",
+        "description": "",
+        "options": {
+          "sortX": true,
+          "xAxis": {
+            "type": "-",
+            "labels": {
+              "enabled": true
+            }
+          },
+          "yAxis": [
+            {
+              "type": "linear"
+            },
+            {
+              "type": "linear",
+              "opposite": true
+            }
+          ],
+          "legend": {
+            "enabled": true,
+            "placement": "below",
+            "traceorder": "normal"
+          },
+          "series": {
+            "error_y": {
+              "type": "data",
+              "visible": true
+            },
+            "stacking": null
+          },
+          "error_y": {
+            "type": "data",
+            "visible": true
+          },
+          "piesort": true,
+          "sizemode": "diameter",
+          "direction": {
+            "type": "counterclockwise"
+          },
+          "enableLink": false,
+          "linkFormat": "",
+          "textFormat": "",
+          "coefficient": 1,
+          "swappedAxes": false,
+          "color_scheme": "Redash",
+          "numberFormat": "0,0[.]00000",
+          "columnMapping": {
+            "items_count": "y",
+            "price_range": "x"
+          },
+          "percentFormat": "0[.]00%",
+          "seriesOptions": {},
+          "valuesOptions": {},
+          "dateTimeFormat": "DD/MM/YY HH:mm",
+          "linkOpenNewTab": true,
+          "showDataLabels": true,
+          "alignYAxesAtZero": false,
+          "globalSeriesType": "pie",
+          "missingValuesAsZero": true
+        },
+        "updated_at": "2026-01-15T19:48:45.847Z",
+        "created_at": "2026-01-04T14:47:02.704Z",
+        "query": {
+          "id": 3,
+          "latest_query_data_id": 205,
+          "name": "Распределение цен уникальных предметов",
+          "description": null,
+          "query": "SELECT\n  price_range,\n  COUNT(*) AS items_count\nFROM\n  (\n    SELECT\n      CASE\n        WHEN chaos_value < 10 THEN '<10c'\n        WHEN chaos_value BETWEEN 10\n        AND 50 THEN '10-50c'\n        WHEN chaos_value BETWEEN 50\n        AND 100 THEN '50-100c'\n        WHEN chaos_value BETWEEN 100\n        AND 500 THEN '100-500c'\n        ELSE '>500c'\n      END AS price_range\n    FROM\n      unique_items\n    WHERE\n      chaos_value IS NOT NULL\n      AND \"timestamp\" = (\n        SELECT\n          MAX(d.\"timestamp\")\n        FROM\n          unique_items d\n      )\n  ) t\nGROUP BY\n  price_range\nORDER BY\n  CASE\n    price_range\n    WHEN '<10c' THEN 1\n    WHEN '10-50c' THEN 2\n    WHEN '50-100c' THEN 3\n    WHEN '100-500c' THEN 4\n    ELSE 5\n  END;",
+          "query_hash": "336ebb6f23c2f4dda37e6b5f437ca1d3",
+          "schedule": {
+            "time": null,
+            "until": null,
+            "interval": 1800,
+            "day_of_week": null
+          },
+          "api_key": "fPpwjy2jfVzY2Kh3QaACgMeVLwheRuRAsBN291CO",
+          "is_archived": false,
+          "is_draft": false,
+          "updated_at": "2026-01-04T14:48:44.516Z",
+          "created_at": "2026-01-04T14:30:28.023Z",
+          "data_source_id": 2,
+          "options": {
+            "parameters": [],
+            "apply_auto_limit": true
+          },
+          "version": 1,
+          "tags": [],
+          "is_safe": true,
+          "user": {
+            "id": 1,
+            "name": "admin",
+            "email": "danil.urnov1999@gmail.com",
+            "profile_image_url": "https://www.gravatar.com/avatar/cd8f048411eb5e4e3b4f7efd99174622?s=40&d=identicon",
+            "groups": [
+              1,
+              2
+            ],
+            "updated_at": "2026-01-15T20:21:41.575Z",
+            "created_at": "2026-01-04T11:37:52.556Z",
+            "disabled_at": null,
+            "is_disabled": false,
+            "active_at": null,
+            "is_invitation_pending": false,
+            "is_email_verified": true,
+            "auth_type": "password"
+          },
+          "last_modified_by": {
+            "id": 1,
+            "name": "admin",
+            "email": "danil.urnov1999@gmail.com",
+            "profile_image_url": "https://www.gravatar.com/avatar/cd8f048411eb5e4e3b4f7efd99174622?s=40&d=identicon",
+            "groups": [
+              1,
+              2
+            ],
+            "updated_at": "2026-01-15T20:21:41.575Z",
+            "created_at": "2026-01-04T11:37:52.556Z",
+            "disabled_at": null,
+            "is_disabled": false,
+            "active_at": null,
+            "is_invitation_pending": false,
+            "is_email_verified": true,
+            "auth_type": "password"
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "width": 1,
+      "options": {
+        "isHidden": false,
+        "position": {
+          "col": 4,
+          "row": 0,
+          "sizeX": 4,
+          "sizeY": 7,
+          "maxSizeX": 12,
+          "maxSizeY": 1000,
+          "minSizeX": 1,
+          "minSizeY": 5,
+          "autoHeight": false
+        },
+        "parameterMappings": {}
+      },
+      "dashboard_id": 1,
+      "text": "",
+      "updated_at": "2026-01-15T20:12:03.161Z",
+      "created_at": "2026-01-15T20:05:08.658Z",
+      "visualization": {
+        "id": 10,
+        "type": "CHART",
+        "name": "Chart",
+        "description": "",
+        "options": {
+          "sortX": false,
+          "xAxis": {
+            "type": "-",
+            "title": {
+              "text": "Имя валюты"
+            },
+            "labels": {
+              "enabled": true
+            }
+          },
+          "yAxis": [
+            {
+              "type": "linear",
+              "title": {
+                "text": "Цена в хаосах"
+              },
+              "rangeMax": 20000
+            },
+            {
+              "type": "linear",
+              "opposite": true
+            }
+          ],
+          "legend": {
+            "enabled": true,
+            "placement": "auto",
+            "traceorder": "normal"
+          },
+          "series": {
+            "error_y": {
+              "type": "data",
+              "visible": true
+            },
+            "stacking": null
+          },
+          "error_y": {
+            "type": "data",
+            "visible": true
+          },
+          "piesort": true,
+          "sizemode": "diameter",
+          "direction": {
+            "type": "counterclockwise"
+          },
+          "enableLink": false,
+          "linkFormat": "",
+          "textFormat": "",
+          "coefficient": 1,
+          "color_scheme": "Redash",
+          "numberFormat": "0,0[.]00000",
+          "columnMapping": {
+            "currency_name": "x",
+            "chaos_equivalent": "y"
+          },
+          "percentFormat": "0[.]00%",
+          "seriesOptions": {},
+          "valuesOptions": {},
+          "dateTimeFormat": "DD/MM/YY HH:mm",
+          "linkOpenNewTab": true,
+          "showDataLabels": false,
+          "alignYAxesAtZero": false,
+          "globalSeriesType": "column",
+          "missingValuesAsZero": true
+        },
+        "updated_at": "2026-01-15T20:08:05.992Z",
+        "created_at": "2026-01-15T20:04:37.671Z",
+        "query": {
+          "id": 1,
+          "latest_query_data_id": 200,
+          "name": "best 10 currency prices",
+          "description": null,
+          "query": "select\n  currency_name,\n  chaos_equivalent\nfrom\n  currency_prices\nWHERE\n  \"timestamp\" = (\n    SELECT\n      MAX(\"timestamp\")\n    FROM\n      currency_prices\n  )\norder by\n  chaos_equivalent desc\nlimit\n  10\n\n",
+          "query_hash": "ad981b0f42b638a6292de02578628e51",
+          "schedule": {
+            "time": null,
+            "until": null,
+            "interval": 1800,
+            "day_of_week": null
+          },
+          "api_key": "vPGMaeBCchYre34KdB6eJRa1STXRXhcC7QZJStxv",
+          "is_archived": false,
+          "is_draft": false,
+          "updated_at": "2026-01-15T20:04:37.671Z",
+          "created_at": "2026-01-04T13:05:19.071Z",
+          "data_source_id": 2,
+          "options": {
+            "parameters": [],
+            "apply_auto_limit": true
+          },
+          "version": 1,
+          "tags": [],
+          "is_safe": true,
+          "user": {
+            "id": 1,
+            "name": "admin",
+            "email": "danil.urnov1999@gmail.com",
+            "profile_image_url": "https://www.gravatar.com/avatar/cd8f048411eb5e4e3b4f7efd99174622?s=40&d=identicon",
+            "groups": [
+              1,
+              2
+            ],
+            "updated_at": "2026-01-15T20:21:41.575Z",
+            "created_at": "2026-01-04T11:37:52.556Z",
+            "disabled_at": null,
+            "is_disabled": false,
+            "active_at": null,
+            "is_invitation_pending": false,
+            "is_email_verified": true,
+            "auth_type": "password"
+          },
+          "last_modified_by": {
+            "id": 1,
+            "name": "admin",
+            "email": "danil.urnov1999@gmail.com",
+            "profile_image_url": "https://www.gravatar.com/avatar/cd8f048411eb5e4e3b4f7efd99174622?s=40&d=identicon",
+            "groups": [
+              1,
+              2
+            ],
+            "updated_at": "2026-01-15T20:21:41.575Z",
+            "created_at": "2026-01-04T11:37:52.556Z",
+            "disabled_at": null,
+            "is_disabled": false,
+            "active_at": null,
+            "is_invitation_pending": false,
+            "is_email_verified": true,
+            "auth_type": "password"
+          }
+        }
+      }
+    },
+    {
+      "id": 8,
+      "width": 1,
+      "options": {
+        "isHidden": false,
+        "position": {
+          "col": 8,
+          "row": 0,
+          "sizeX": 4,
+          "sizeY": 9,
+          "maxSizeX": 12,
+          "maxSizeY": 1000,
+          "minSizeX": 1,
+          "minSizeY": 5,
+          "autoHeight": false
+        },
+        "parameterMappings": {}
+      },
+      "dashboard_id": 1,
+      "text": "",
+      "updated_at": "2026-01-15T20:24:49.844Z",
+      "created_at": "2026-01-15T20:11:22.943Z",
+      "visualization": {
+        "id": 11,
+        "type": "CHART",
+        "name": "Chart",
+        "description": "",
+        "options": {
+          "sortX": true,
+          "xAxis": {
+            "type": "-",
+            "title": {
+              "text": "Имя предмета"
+            },
+            "labels": {
+              "enabled": true
+            }
+          },
+          "yAxis": [
+            {
+              "type": "linear",
+              "title": {
+                "text": "изменение (%)"
+              }
+            },
+            {
+              "type": "linear",
+              "opposite": true
+            }
+          ],
+          "legend": {
+            "enabled": true,
+            "placement": "auto",
+            "traceorder": "normal"
+          },
+          "series": {
+            "error_y": {
+              "type": "data",
+              "visible": true
+            },
+            "stacking": "stack",
+            "percentValues": false
+          },
+          "error_y": {
+            "type": "data",
+            "visible": true
+          },
+          "piesort": true,
+          "sizemode": "diameter",
+          "direction": {
+            "type": "counterclockwise"
+          },
+          "enableLink": false,
+          "linkFormat": "",
+          "textFormat": "",
+          "coefficient": 1,
+          "swappedAxes": true,
+          "color_scheme": "Redash",
+          "numberFormat": "0,0[.]00000",
+          "columnMapping": {
+            "category": "series",
+            "item_name": "x",
+            "change_percent": "y"
+          },
+          "percentFormat": "0[.]00%",
+          "seriesOptions": {},
+          "valuesOptions": {},
+          "dateTimeFormat": "DD/MM/YY HH:mm",
+          "linkOpenNewTab": true,
+          "showDataLabels": false,
+          "alignYAxesAtZero": false,
+          "globalSeriesType": "column",
+          "missingValuesAsZero": true
+        },
+        "updated_at": "2026-01-15T20:11:22.943Z",
+        "created_at": "2026-01-15T20:07:15.231Z",
+        "query": {
+          "id": 4,
+          "latest_query_data_id": 203,
+          "name": "Волатильность цен валют",
+          "description": null,
+          "query": "WITH latest_prices AS (\r\n    -- Шаг 1: Находим самую актуальную цену (current_price) для каждой валюты\r\n    SELECT\r\n        currency_name,\r\n        chaos_equivalent AS current_price,\r\n        timestamp AS current_timestamp,\r\n        ROW_NUMBER() OVER (PARTITION BY currency_name ORDER BY timestamp DESC) as rn\r\n    FROM\r\n        currency_prices\r\n),\r\nfiltered_current_prices AS (\r\n    -- Шаг 2: Отбираем только самые актуальные записи\r\n    SELECT\r\n        currency_name,\r\n        current_price,\r\n        current_timestamp\r\n    FROM\r\n        latest_prices\r\n    WHERE\r\n        rn = 1\r\n),\r\n-- Шаг 3: Находим цену, которая была наиболее актуальной, но старше 24 часов от current_timestamp\r\n-- Используем LEFT JOIN и ROW_NUMBER для эффективного поиска price_24h_ago\r\nprices_with_24h_ago_candidates AS (\r\n    SELECT\r\n        fcp.currency_name,\r\n        fcp.current_price,\r\n        fcp.current_timestamp,\r\n        cp_old.chaos_equivalent AS candidate_price_24h_ago,\r\n        ROW_NUMBER() OVER (PARTITION BY fcp.currency_name ORDER BY cp_old.timestamp DESC) as rn_old\r\n    FROM\r\n        filtered_current_prices AS fcp\r\n    LEFT JOIN currency_prices AS cp_old\r\n        ON fcp.currency_name = cp_old.currency_name\r\n        AND cp_old.timestamp < (fcp.current_timestamp - INTERVAL '24 hours')\r\n),\r\n-- Шаг 4: Выбираем окончательные цены и рассчитываем процентное изменение\r\nfinal_prices_and_changes AS (\r\n    SELECT\r\n        p.currency_name AS item_name,\r\n        p.current_price,\r\n        p.candidate_price_24h_ago AS price_24h_ago,\r\n        CASE\r\n            WHEN p.candidate_price_24h_ago IS NULL OR p.candidate_price_24h_ago = 0 THEN NULL\r\n            ELSE ((p.current_price - p.candidate_price_24h_ago) / p.candidate_price_24h_ago) * 100\r\n        END AS change_percent\r\n    FROM\r\n        prices_with_24h_ago_candidates p\r\n    WHERE\r\n        p.rn_old = 1 OR p.candidate_price_24h_ago IS NULL -- Выбираем самую актуальную старую цену, либо если ее нет\r\n)\r\n-- Шаг 5: Выбираем топ N валют с наибольшим положительным изменением\r\n(SELECT\r\n    'Top Positive Change' AS category,\r\n    item_name,\r\n    current_price,\r\n    price_24h_ago,\r\n    change_percent\r\nFROM\r\n    final_prices_and_changes\r\nWHERE\r\n    change_percent IS NOT NULL AND change_percent > 0\r\n    and change_percent<1000-- Только положительные изменения\r\nORDER BY\r\n    change_percent DESC\r\nLIMIT 5) -- Измените 5 на желаемое количество (например, 10 для топ-10)\r\n\r\nUNION ALL\r\n\r\n-- Шаг 6: Выбираем топ N валют с наибольшим отрицательным изменением\r\n(SELECT\r\n    'Top Negative Change' AS category,\r\n    item_name,\r\n    current_price,\r\n    price_24h_ago,\r\n    change_percent\r\nFROM\r\n    final_prices_and_changes\r\nWHERE\r\n    change_percent IS NOT NULL AND change_percent < 0\r\n    and change_percent>-77-- Только отрицательные изменения\r\nORDER BY\r\n    change_percent ASC -- Для отрицательных значений ASC даст \"самые-самые минусы\"\r\nLIMIT 5); -- Измените 5 на желаемое количество (например, 10 для топ-10)\r\n",
+          "query_hash": "e0b70f7b511ab25a5d6f69b879e23a7f",
+          "schedule": {
+            "time": null,
+            "until": null,
+            "interval": 1800,
+            "day_of_week": null
+          },
+          "api_key": "BsW0qWVUQ99BdkvArDVigTA8YI99QnTj7rQp0XSZ",
+          "is_archived": false,
+          "is_draft": false,
+          "updated_at": "2026-01-15T20:07:15.231Z",
+          "created_at": "2026-01-15T02:29:53.825Z",
+          "data_source_id": 2,
+          "options": {
+            "parameters": [],
+            "apply_auto_limit": true
+          },
+          "version": 1,
+          "tags": [],
+          "is_safe": true,
+          "user": {
+            "id": 1,
+            "name": "admin",
+            "email": "danil.urnov1999@gmail.com",
+            "profile_image_url": "https://www.gravatar.com/avatar/cd8f048411eb5e4e3b4f7efd99174622?s=40&d=identicon",
+            "groups": [
+              1,
+              2
+            ],
+            "updated_at": "2026-01-15T20:21:41.575Z",
+            "created_at": "2026-01-04T11:37:52.556Z",
+            "disabled_at": null,
+            "is_disabled": false,
+            "active_at": null,
+            "is_invitation_pending": false,
+            "is_email_verified": true,
+            "auth_type": "password"
+          },
+          "last_modified_by": {
+            "id": 1,
+            "name": "admin",
+            "email": "danil.urnov1999@gmail.com",
+            "profile_image_url": "https://www.gravatar.com/avatar/cd8f048411eb5e4e3b4f7efd99174622?s=40&d=identicon",
+            "groups": [
+              1,
+              2
+            ],
+            "updated_at": "2026-01-15T20:21:41.575Z",
+            "created_at": "2026-01-04T11:37:52.556Z",
+            "disabled_at": null,
+            "is_disabled": false,
+            "active_at": null,
+            "is_invitation_pending": false,
+            "is_email_verified": true,
+            "auth_type": "password"
+          }
+        }
+      }
+    }
+  ],
+  "options": {},
+  "is_archived": false,
+  "is_draft": false,
+  "tags": [],
+  "updated_at": "2026-01-15T20:13:05.640Z",
+  "created_at": "2026-01-15T19:38:11.803Z",
+  "version": 2,
+  "is_favorite": false,
+  "public_url": "http://localhost:8080/public/dashboards/IXaYKhkdsOpF9kKtQsRIoU6l7eDigADe5zoEEFXs?org_slug=default",
+  "api_key": "IXaYKhkdsOpF9kKtQsRIoU6l7eDigADe5zoEEFXs",
+  "can_edit": true
+}
